@@ -859,35 +859,36 @@
   </div>
 
   <script>
-    let allVideos = [];
-    let allTrails = [];
-    let currentUser = null;
-    let confirmCallback = null;
+    var allVideos = [];
+    var allTrails = [];
+    var currentUser = null;
+    var confirmCallback = null;
 
-    function showToast(message, type = 'success') {
-      const toastId = 'toast_' + Date.now();
-      const toast = document.createElement('div');
-      toast.id = toastId;
-      toast.className = `toast ${type}`;
+    function showToast(message, type) {
+      if (typeof type === 'undefined') type = 'success';
       
-      const icon = type === 'success' ? 'check-circle' : 
+      var toastId = 'toast_' + Date.now();
+      var toast = document.createElement('div');
+      toast.id = toastId;
+      toast.className = 'toast ' + type;
+      
+      var icon = type === 'success' ? 'check-circle' : 
                    type === 'error' ? 'exclamation-circle' : 
                    type === 'warning' ? 'exclamation-triangle' : 'info-circle';
       
-      toast.innerHTML = `
-        <i class="fas fa-${icon}"></i>
-        <span>${message}</span>
-      `;
+      toast.innerHTML = '<i class="fas fa-' + icon + '"></i>' +
+        '<span>' + message + '</span>';
       
       document.body.appendChild(toast);
       
-      setTimeout(() => {
+      setTimeout(function() {
         toast.classList.add('hiding');
-        setTimeout(() => toast.remove(), 300);
+        setTimeout(function() { toast.remove(); }, 300);
       }, 3000);
     }
 
-    function showLoading(text = 'Processando...') {
+    function showLoading(text) {
+      if (typeof text === 'undefined') text = 'Processando...';
       document.getElementById('loadingText').textContent = text;
       document.getElementById('loadingOverlay').classList.add('active');
     }
@@ -924,14 +925,14 @@
     };
 
     async function loadCurrentUser() {
-      google.script.run.withSuccessHandler(user => {
+      google.script.run.withSuccessHandler(function(user) {
         currentUser = user;
         document.getElementById('adminName').textContent = user.name;
       }).getCurrentUser();
     }
 
     async function loadMetrics() {
-      google.script.run.withSuccessHandler(metrics => {
+      google.script.run.withSuccessHandler(function(metrics) {
         document.getElementById('totalUsers').textContent = metrics.totalUsers;
         document.getElementById('totalVideos').textContent = metrics.totalVideos;
         document.getElementById('totalTrails').textContent = metrics.totalTrails;
@@ -941,50 +942,54 @@
     }
 
     async function loadVideos() {
-      google.script.run.withSuccessHandler(videos => {
+      google.script.run.withSuccessHandler(function(videos) {
         allVideos = videos;
         displayVideos(videos);
       }).getVideos();
     }
 
     function displayVideos(videos) {
-      const container = document.getElementById('videosList');
+      var container = document.getElementById('videosList');
       
       if (videos.length === 0) {
-        container.innerHTML = `
-          <div class="alert alert-warning">
-            <i class="fas fa-info-circle"></i>
-            Nenhum vídeo cadastrado ainda. Clique em "Adicionar Vídeo" para começar.
-          </div>
-        `;
+        container.innerHTML = '<div class="alert alert-warning">' +
+          '<i class="fas fa-info-circle"></i> ' +
+          'Nenhum vídeo cadastrado ainda. Clique em "Adicionar Vídeo" para começar.' +
+          '</div>';
         return;
       }
       
-      container.innerHTML = videos.map(video => `
-        <div class="video-item">
-          <div class="video-item-thumb">
-            ${video.thumbnail ? `<img src="${video.thumbnail}" alt="${video.title}">` : '<i class="fas fa-video" style="padding: 30px; font-size: 24px; color: var(--text-secondary);"></i>'}
-          </div>
-          <div class="video-item-info">
-            <div class="video-item-title">${video.title}</div>
-            <div class="video-item-meta">
-              <i class="fas fa-eye"></i> ${video.views} visualizações
-              <span style="margin: 0 8px;">•</span>
-              <i class="fas fa-heart"></i> ${video.likes} curtidas
-              <span style="margin: 0 8px;">•</span>
-              ID: ${video.vimeoId}
-            </div>
-          </div>
-          <div class="video-item-actions">
-            <button class="btn btn-primary btn-sm" onclick="openEditVideoModal('${video.id}')" style="margin-right: 8px;">
-              <i class="fas fa-edit"></i>
-            </button>
-            <button class="btn btn-danger btn-sm" onclick="deleteVideo('${video.id}')">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-        </div>
-      `).join('');
+      var html = '';
+      for (var i = 0; i < videos.length; i++) {
+        var video = videos[i];
+        var thumbHtml = video.thumbnail ? 
+          '<img src="' + video.thumbnail + '" alt="' + video.title + '">' : 
+          '<i class="fas fa-video" style="padding: 30px; font-size: 24px; color: var(--text-secondary);"></i>';
+        
+        html += '<div class="video-item">' +
+          '<div class="video-item-thumb">' + thumbHtml + '</div>' +
+          '<div class="video-item-info">' +
+            '<div class="video-item-title">' + video.title + '</div>' +
+            '<div class="video-item-meta">' +
+              '<i class="fas fa-eye"></i> ' + video.views + ' visualizações' +
+              '<span style="margin: 0 8px;">•</span>' +
+              '<i class="fas fa-heart"></i> ' + video.likes + ' curtidas' +
+              '<span style="margin: 0 8px;">•</span>' +
+              'ID: ' + video.vimeoId +
+            '</div>' +
+          '</div>' +
+          '<div class="video-item-actions">' +
+            '<button class="btn btn-primary btn-sm" onclick="openEditVideoModal(\'' + video.id + '\')" style="margin-right: 8px;">' +
+              '<i class="fas fa-edit"></i>' +
+            '</button>' +
+            '<button class="btn btn-danger btn-sm" onclick="deleteVideo(\'' + video.id + '\')">' +
+              '<i class="fas fa-trash"></i>' +
+            '</button>' +
+          '</div>' +
+        '</div>';
+      }
+      
+      container.innerHTML = html;
     }
 
     function openAddVideoModal() {
@@ -995,7 +1000,7 @@
     }
 
     function openEditVideoModal(videoId) {
-      const video = allVideos.find(function(v) { return v.id === videoId; });
+      var video = allVideos.find(function(v) { return v.id === videoId; });
       if (!video) return;
       
       document.getElementById('videoModalTitle').textContent = 'Editar Vídeo';
@@ -1049,8 +1054,8 @@
     }
 
     function updateVideoPreview() {
-      const thumbnail = document.getElementById('videoThumbnail').value;
-      const preview = document.getElementById('videoPreview');
+      var thumbnail = document.getElementById('videoThumbnail').value;
+      var preview = document.getElementById('videoPreview');
       
       if (thumbnail) {
         preview.innerHTML = '<img src="' + thumbnail + '" alt="Preview" onerror="this.parentElement.innerHTML=\'<i class=\\'fas fa-exclamation-triangle\\'></i>\'">';
@@ -1060,7 +1065,7 @@
     }
 
     function fetchAutoThumbnail() {
-      const vimeoId = document.getElementById('videoVimeoId').value;
+      var vimeoId = document.getElementById('videoVimeoId').value;
       
       if (!vimeoId) {
         showToast('Por favor, preencha o ID do Vimeo primeiro', 'warning');
@@ -1084,7 +1089,7 @@
     }
 
     function handleThumbnailUpload() {
-      const file = document.getElementById('thumbnailFile').files[0];
+      var file = document.getElementById('thumbnailFile').files[0];
       
       if (!file) return;
       
@@ -1095,10 +1100,10 @@
       
       showLoading('Fazendo upload da imagem...');
       
-      const reader = new FileReader();
+      var reader = new FileReader();
       reader.onload = function(e) {
-        const base64Image = e.target.result;
-        const filename = 'thumb_' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+        var base64Image = e.target.result;
+        var filename = 'thumb_' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9.]/g, '_');
         
         google.script.run
           .withSuccessHandler(function(publicUrl) {
@@ -1118,18 +1123,18 @@
     }
 
     function saveVideo() {
-      const editingId = document.getElementById('editingVideoId').value;
-      const title = document.getElementById('videoTitle').value;
-      const vimeoId = document.getElementById('videoVimeoId').value;
-      const thumbnail = document.getElementById('videoThumbnail').value;
-      const description = document.getElementById('videoDescription').value;
+      var editingId = document.getElementById('editingVideoId').value;
+      var title = document.getElementById('videoTitle').value;
+      var vimeoId = document.getElementById('videoVimeoId').value;
+      var thumbnail = document.getElementById('videoThumbnail').value;
+      var description = document.getElementById('videoDescription').value;
       
       if (!title || !vimeoId) {
         showToast('Por favor, preencha todos os campos obrigatórios', 'warning');
         return;
       }
       
-      const videoData = {
+      var videoData = {
         title: title,
         vimeoId: vimeoId,
         thumbnail: thumbnail,
@@ -1176,15 +1181,15 @@
       showConfirm(
         'Excluir Vídeo',
         'Esta ação não pode ser desfeita. Deseja continuar?',
-        () => {
+        function() {
           showLoading('Excluindo vídeo...');
           
-          google.script.run.withSuccessHandler(result => {
+          google.script.run.withSuccessHandler(function(result) {
             hideLoading();
             showToast('Vídeo excluído com sucesso!');
             loadVideos();
             loadMetrics();
-          }).withFailureHandler(error => {
+          }).withFailureHandler(function(error) {
             hideLoading();
             showToast('Erro ao excluir vídeo. Tente novamente.', 'error');
             console.error(error);
@@ -1194,49 +1199,52 @@
     }
 
     async function loadTrails() {
-      google.script.run.withSuccessHandler(trails => {
+      google.script.run.withSuccessHandler(function(trails) {
         allTrails = trails;
         displayTrails(trails);
       }).getTrails();
     }
 
     function displayTrails(trails) {
-      const container = document.getElementById('trailsList');
+      var container = document.getElementById('trailsList');
       
       if (trails.length === 0) {
-        container.innerHTML = `
-          <div class="alert alert-warning">
-            <i class="fas fa-info-circle"></i>
-            Nenhuma trilha criada ainda. Clique em "Criar Trilha" para começar.
-          </div>
-        `;
+        container.innerHTML = '<div class="alert alert-warning">' +
+          '<i class="fas fa-info-circle"></i> ' +
+          'Nenhuma trilha criada ainda. Clique em "Criar Trilha" para começar.' +
+          '</div>';
         return;
       }
       
-      container.innerHTML = trails.map(trail => `
-        <div class="trail-item">
-          <div class="trail-item-header">
-            <div>
-              <div class="trail-item-title">${trail.name}</div>
-              <div class="trail-item-description">${trail.description}</div>
-            </div>
-            <button class="btn btn-danger btn-sm" onclick="deleteTrail('${trail.id}')">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-          <div class="trail-videos-count">
-            <i class="fas fa-video"></i>
-            ${trail.totalVideos} vídeo${trail.totalVideos !== 1 ? 's' : ''}
-          </div>
-        </div>
-      `).join('');
+      var html = '';
+      for (var i = 0; i < trails.length; i++) {
+        var trail = trails[i];
+        html += '<div class="trail-item">' +
+          '<div class="trail-item-header">' +
+            '<div>' +
+              '<div class="trail-item-title">' + trail.name + '</div>' +
+              '<div class="trail-item-description">' + trail.description + '</div>' +
+            '</div>' +
+            '<button class="btn btn-danger btn-sm" onclick="deleteTrail(\'' + trail.id + '\')">' +
+              '<i class="fas fa-trash"></i>' +
+            '</button>' +
+          '</div>' +
+          '<div class="trail-videos-count">' +
+            '<i class="fas fa-video"></i> ' +
+            trail.totalVideos + ' vídeo' + (trail.totalVideos !== 1 ? 's' : '') +
+          '</div>' +
+        '</div>';
+      }
+      container.innerHTML = html;
     }
 
     function openAddTrailModal() {
-      const select = document.getElementById('trailVideos');
-      select.innerHTML = allVideos.map(video => `
-        <option value="${video.id}">${video.title}</option>
-      `).join('');
+      var select = document.getElementById('trailVideos');
+      var html = '';
+      for (var i = 0; i < allVideos.length; i++) {
+        html += '<option value="' + allVideos[i].id + '">' + allVideos[i].title + '</option>';
+      }
+      select.innerHTML = html;
       
       document.getElementById('addTrailModal').classList.add('active');
     }
@@ -1248,10 +1256,14 @@
     }
 
     async function addTrail() {
-      const name = document.getElementById('trailName').value;
-      const description = document.getElementById('trailDescription').value;
-      const select = document.getElementById('trailVideos');
-      const videos = Array.from(select.selectedOptions).map(opt => opt.value);
+      var name = document.getElementById('trailName').value;
+      var description = document.getElementById('trailDescription').value;
+      var select = document.getElementById('trailVideos');
+      var options = select.selectedOptions;
+      var videos = [];
+      for (var i = 0; i < options.length; i++) {
+        videos.push(options[i].value);
+      }
       
       if (!name || videos.length === 0) {
         showToast('Por favor, preencha o nome e selecione pelo menos um vídeo', 'warning');
@@ -1260,32 +1272,32 @@
       
       showLoading('Criando trilha...');
       
-      google.script.run.withSuccessHandler(result => {
+      google.script.run.withSuccessHandler(function(result) {
         hideLoading();
         showToast('Trilha criada com sucesso!');
         closeAddTrailModal();
         loadTrails();
         loadMetrics();
-      }).withFailureHandler(error => {
+      }).withFailureHandler(function(error) {
         hideLoading();
         showToast('Erro ao criar trilha. Tente novamente.', 'error');
         console.error(error);
-      }).addTrail({ name, description, videos });
+      }).addTrail({ name: name, description: description, videos: videos });
     }
 
     async function deleteTrail(trailId) {
       showConfirm(
         'Excluir Trilha',
         'Esta ação não pode ser desfeita. Deseja continuar?',
-        () => {
+        function() {
           showLoading('Excluindo trilha...');
           
-          google.script.run.withSuccessHandler(result => {
+          google.script.run.withSuccessHandler(function(result) {
             hideLoading();
             showToast('Trilha excluída com sucesso!');
             loadTrails();
             loadMetrics();
-          }).withFailureHandler(error => {
+          }).withFailureHandler(function(error) {
             hideLoading();
             showToast('Erro ao excluir trilha. Tente novamente.', 'error');
             console.error(error);
@@ -1295,28 +1307,29 @@
     }
 
     async function loadStudents() {
-      google.script.run.withSuccessHandler(students => {
-        const tbody = document.getElementById('studentsTableBody');
+      google.script.run.withSuccessHandler(function(students) {
+        var tbody = document.getElementById('studentsTableBody');
         
         if (students.length === 0) {
-          tbody.innerHTML = `
-            <tr>
-              <td colspan="4" style="text-align: center; color: var(--text-secondary);">
-                Nenhum aluno cadastrado
-              </td>
-            </tr>
-          `;
+          tbody.innerHTML = '<tr>' +
+            '<td colspan="4" style="text-align: center; color: var(--text-secondary);">' +
+              'Nenhum aluno cadastrado' +
+            '</td>' +
+          '</tr>';
           return;
         }
         
-        tbody.innerHTML = students.map(student => `
-          <tr>
-            <td><strong>${student.name}</strong></td>
-            <td>${student.email}</td>
-            <td><strong>${student.points}</strong> pontos</td>
-            <td>${student.videosWatched || 0} vídeos</td>
-          </tr>
-        `).join('');
+        var html = '';
+        for (var i = 0; i < students.length; i++) {
+          var student = students[i];
+          html += '<tr>' +
+            '<td><strong>' + student.name + '</strong></td>' +
+            '<td>' + student.email + '</td>' +
+            '<td><strong>' + student.points + '</strong> pontos</td>' +
+            '<td>' + (student.videosWatched || 0) + ' vídeos</td>' +
+          '</tr>';
+        }
+        tbody.innerHTML = html;
       }).getTopStudents(100);
     }
   </script>
