@@ -1,16 +1,16 @@
 // ==================== CONFIGURAÇÃO ====================
 // IMPORTANTE: Substitua pelo ID da sua planilha Google Sheets
-const SPREADSHEET_ID = 'SEU_ID_DA_PLANILHA_AQUI';
+var SPREADSHEET_ID = '1NVBid2fXLNuIJNV08zUEnTo7YwZJSZoOw4t07VNbAbg';
 
 // Lista de emails dos administradores
-const ADMIN_EMAILS = [
-  'admin@suaempresa.com',
+var ADMIN_EMAILS = [
+  'bruno.pavao@grupoboticario.com.br',
   // Adicione mais emails de admin aqui
 ];
 
 // ==================== DIAGNÓSTICO ====================
 function diagnosticar() {
-  const resultado = {
+  var resultado = {
     spreadsheetId: SPREADSHEET_ID,
     planilhaAcessivel: false,
     abas: [],
@@ -19,25 +19,25 @@ function diagnosticar() {
   };
   
   try {
-    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     resultado.planilhaAcessivel = true;
     resultado.nomePlanilha = ss.getName();
     
     // Listar todas as abas
-    const sheets = ss.getSheets();
-    sheets.forEach(sheet => {
-      resultado.abas.push(sheet.getName());
-    });
+    var sheets = ss.getSheets();
+    for (var j = 0; j < sheets.length; j++) {
+      resultado.abas.push(sheets[j].getName());
+    }
     
     // Tentar buscar vídeos
-    const videoSheet = ss.getSheetByName('Videos');
+    var videoSheet = ss.getSheetByName('Videos');
     if (videoSheet) {
-      const data = videoSheet.getDataRange().getValues();
+      var data = videoSheet.getDataRange().getValues();
       resultado.totalLinhas = data.length;
       resultado.headers = data[0];
       
       // Pegar primeiros 3 vídeos
-      for (let i = 1; i < Math.min(data.length, 4); i++) {
+      for (var i = 1; i < Math.min(data.length, 4); i++) {
         resultado.videos.push(data[i]);
       }
     } else {
@@ -55,18 +55,18 @@ function diagnosticar() {
 // ==================== CORREÇÃO ====================
 // Execute esta função UMA VEZ para corrigir VimeoIDs salvos como números
 function corrigirVimeoIds() {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Videos');
-  const data = sheet.getDataRange().getValues();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('Videos');
+  var data = sheet.getDataRange().getValues();
   
-  let corrigidos = 0;
+  var corrigidos = 0;
   
-  for (let i = 1; i < data.length; i++) {
-    const vimeoId = data[i][2];
+  for (var i = 1; i < data.length; i++) {
+    var vimeoId = data[i][2];
     
     // Se for número, converter para texto
     if (typeof vimeoId === 'number' || !String(vimeoId).startsWith("'")) {
-      const vimeoIdStr = String(vimeoId);
+      var vimeoIdStr = String(vimeoId);
       sheet.getRange(i + 1, 3).setValue("'" + vimeoIdStr);
       Logger.log('Corrigido linha ' + (i + 1) + ': ' + vimeoId + ' -> ' + vimeoIdStr);
       corrigidos++;
@@ -80,7 +80,7 @@ function corrigirVimeoIds() {
 // ==================== GITHUB CONFIGURATION ====================
 
 function getGitHubToken() {
-  const props = PropertiesService.getScriptProperties();
+  var props = PropertiesService.getScriptProperties();
   return props.getProperty('GITHUB_TOKEN');
 }
 
@@ -96,26 +96,26 @@ function getGitHubConfig() {
 
 function uploadImageToGitHub(base64Image, filename) {
   try {
-    const token = getGitHubToken();
+    var token = getGitHubToken();
     if (!token) {
       throw new Error('Token do GitHub não configurada. Configure via Properties Service.');
     }
     
-    const config = getGitHubConfig();
-    const path = 'images/' + filename;
+    var config = getGitHubConfig();
+    var path = 'images/' + filename;
     
     // Remover prefixo data:image/...;base64, se existir
-    const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
+    var base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
     
-    const url = 'https://api.github.com/repos/' + config.owner + '/' + config.repo + '/contents/' + path;
+    var url = 'https://api.github.com/repos/' + config.owner + '/' + config.repo + '/contents/' + path;
     
-    const payload = {
+    var payload = {
       message: 'Upload: ' + filename,
       content: base64Data,
       branch: config.branch
     };
     
-    const options = {
+    var options = {
       method: 'put',
       headers: {
         'Authorization': 'token ' + token,
@@ -126,16 +126,16 @@ function uploadImageToGitHub(base64Image, filename) {
       muteHttpExceptions: true
     };
     
-    const response = UrlFetchApp.fetch(url, options);
-    const responseCode = response.getResponseCode();
+    var response = UrlFetchApp.fetch(url, options);
+    var responseCode = response.getResponseCode();
     
     if (responseCode === 201) {
       // Sucesso
-      const publicUrl = 'https://raw.githubusercontent.com/' + config.owner + '/' + config.repo + '/' + config.branch + '/' + path;
+      var publicUrl = 'https://raw.githubusercontent.com/' + config.owner + '/' + config.repo + '/' + config.branch + '/' + path;
       Logger.log('Imagem enviada com sucesso: ' + publicUrl);
       return publicUrl;
     } else {
-      const errorMsg = 'Erro ao fazer upload: ' + response.getContentText();
+      var errorMsg = 'Erro ao fazer upload: ' + response.getContentText();
       Logger.log(errorMsg);
       throw new Error(errorMsg);
     }
@@ -150,14 +150,14 @@ function uploadImageToGitHub(base64Image, filename) {
 
 function fetchVimeoThumbnail(vimeoId) {
   try {
-    const cleanId = extractVimeoId(vimeoId);
-    const url = 'https://vimeo.com/api/v2/video/' + cleanId + '.json';
+    var cleanId = extractVimeoId(vimeoId);
+    var url = 'https://vimeo.com/api/v2/video/' + cleanId + '.json';
     
-    const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
-    const responseCode = response.getResponseCode();
+    var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    var responseCode = response.getResponseCode();
     
     if (responseCode === 200) {
-      const data = JSON.parse(response.getContentText());
+      var data = JSON.parse(response.getContentText());
       if (data && data[0] && data[0].thumbnail_large) {
         return data[0].thumbnail_large;
       } else {
@@ -176,7 +176,7 @@ function fetchVimeoThumbnail(vimeoId) {
 // ==================== FUNÇÕES PRINCIPAIS ====================
 
 function doGet(e) {
-  const user = Session.getActiveUser().getEmail();
+  var user = Session.getActiveUser().getEmail();
   if (!user) {
     return HtmlService.createHtmlOutput('<h1>Erro: Você precisa estar logado</h1>');
   }
@@ -184,7 +184,7 @@ function doGet(e) {
   initializeSheets();
   
   // Verificar se é acesso ao backoffice
-  const page = e.parameter.page;
+  var page = e.parameter.page;
   
   if (page === 'backoffice') {
     // Verificar se usuário é admin
@@ -192,7 +192,7 @@ function doGet(e) {
       return HtmlService.createHtmlOutput('<h1>Acesso Negado</h1><p>Apenas administradores podem acessar o backoffice.</p>');
     }
     
-    const template = HtmlService.createTemplateFromFile('backoffice');
+    var template = HtmlService.createTemplateFromFile('backoffice');
     template.userEmail = user;
     template.userName = getUserName(user);
     
@@ -202,7 +202,7 @@ function doGet(e) {
   }
   
   // Página padrão para alunos
-  const template = HtmlService.createTemplateFromFile('index');
+  var template = HtmlService.createTemplateFromFile('index');
   template.userEmail = user;
   template.userName = getUserName(user);
   template.isAdmin = isAdmin(user);
@@ -219,9 +219,9 @@ function include(filename) {
 // ==================== INICIALIZAÇÃO ====================
 
 function initializeSheets() {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   
-  const sheets = {
+  var sheets = {
     'Users': ['Email', 'Nome', 'Pontos', 'Role', 'DataCriacao'],
     'Videos': ['ID', 'Titulo', 'VimeoID', 'Thumbnail', 'Descricao', 'Duracao', 'Visualizacoes', 'Likes', 'DataCriacao'],
     'Trails': ['ID', 'Nome', 'Descricao', 'TotalVideos', 'DataCriacao'],
@@ -233,8 +233,8 @@ function initializeSheets() {
     'Config': ['Chave', 'Valor']
   };
   
-  for (const [sheetName, headers] of Object.entries(sheets)) {
-    let sheet = ss.getSheetByName(sheetName);
+  for (var [sheetName, headers] of Object.entries(sheets)) {
+    var sheet = ss.getSheetByName(sheetName);
     if (!sheet) {
       sheet = ss.insertSheet(sheetName);
       sheet.appendRow(headers);
@@ -250,7 +250,7 @@ function isAdmin(email) {
 }
 
 function getCurrentUser() {
-  const email = Session.getActiveUser().getEmail();
+  var email = Session.getActiveUser().getEmail();
   return {
     email: email,
     name: getUserName(email),
@@ -260,29 +260,29 @@ function getCurrentUser() {
 }
 
 function getUserName(email) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Users');
-  const data = sheet.getDataRange().getValues();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('Users');
+  var data = sheet.getDataRange().getValues();
   
-  for (let i = 1; i < data.length; i++) {
+  for (var i = 1; i < data.length; i++) {
     if (data[i][0] === email) {
       return data[i][1] || email.split('@')[0];
     }
   }
   
   // Criar novo usuário
-  const name = email.split('@')[0];
-  const role = isAdmin(email) ? 'admin' : 'student';
+  var name = email.split('@')[0];
+  var role = isAdmin(email) ? 'admin' : 'student';
   sheet.appendRow([email, name, 0, role, new Date()]);
   return name;
 }
 
 function getUserPoints(email) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Users');
-  const data = sheet.getDataRange().getValues();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('Users');
+  var data = sheet.getDataRange().getValues();
   
-  for (let i = 1; i < data.length; i++) {
+  for (var i = 1; i < data.length; i++) {
     if (data[i][0] === email) {
       return data[i][2] || 0;
     }
@@ -291,13 +291,13 @@ function getUserPoints(email) {
 }
 
 function updateUserPoints(email, points) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Users');
-  const data = sheet.getDataRange().getValues();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('Users');
+  var data = sheet.getDataRange().getValues();
   
-  for (let i = 1; i < data.length; i++) {
+  for (var i = 1; i < data.length; i++) {
     if (data[i][0] === email) {
-      const currentPoints = data[i][2] || 0;
+      var currentPoints = data[i][2] || 0;
       sheet.getRange(i + 1, 3).setValue(currentPoints + points);
       return currentPoints + points;
     }
@@ -320,15 +320,15 @@ function extractVimeoId(input) {
   // https://vimeo.com/123456789
   // https://vimeo.com/showcase/123456789/video/987654321
   // https://player.vimeo.com/video/123456789
-  const patterns = [
+  var patterns = [
     /vimeo\.com\/(\d+)/,
     /vimeo\.com\/video\/(\d+)/,
     /player\.vimeo\.com\/video\/(\d+)/,
     /vimeo\.com\/showcase\/\d+\/video\/(\d+)/
   ];
   
-  for (const pattern of patterns) {
-    const match = input.match(pattern);
+  for (var i = 0; i < patterns.length; i++) {
+    var match = input.match(patterns[i]);
     if (match && match[1]) {
       return match[1];
     }
@@ -340,28 +340,28 @@ function extractVimeoId(input) {
 
 function getVideos() {
   try {
-    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    const sheet = ss.getSheetByName('Videos');
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName('Videos');
     
     if (!sheet) {
       Logger.log('Aba Videos não encontrada');
       return [];
     }
     
-    const data = sheet.getDataRange().getValues();
+    var data = sheet.getDataRange().getValues();
     
     if (!data || data.length <= 1) {
       Logger.log('Nenhum vídeo encontrado na planilha');
       return [];
     }
     
-    const videos = [];
-    for (let i = 1; i < data.length; i++) {
+    var videos = [];
+    for (var i = 1; i < data.length; i++) {
       // Pular linhas vazias
       if (!data[i][0]) continue;
       
       // Limpar VimeoID (remover apóstrofo se existir e converter para string)
-      let vimeoId = String(data[i][2] || '').replace(/^'/, '');
+      var vimeoId = String(data[i][2] || '').replace(/^'/, '');
       
       videos.push({
         id: data[i][0],
@@ -385,24 +385,29 @@ function getVideos() {
 }
 
 function getVideo(videoId) {
-  const videos = getVideos();
-  return videos.find(v => v.id === videoId);
+  var videos = getVideos();
+  for (var i = 0; i < videos.length; i++) {
+    if (videos[i].id === videoId) {
+      return videos[i];
+    }
+  }
+  return null;
 }
 
 function addVideo(videoData) {
-  const user = Session.getActiveUser().getEmail();
+  var user = Session.getActiveUser().getEmail();
   if (!isAdmin(user)) {
     throw new Error('Apenas administradores podem adicionar vídeos');
   }
   
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Videos');
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('Videos');
   
   // Extrair ID do Vimeo da URL ou usar ID direto
-  const vimeoId = extractVimeoId(videoData.vimeoId);
+  var vimeoId = extractVimeoId(videoData.vimeoId);
   
-  const id = 'VID_' + new Date().getTime();
-  const row = sheet.getLastRow() + 1;
+  var id = 'VID_' + new Date().getTime();
+  var row = sheet.getLastRow() + 1;
   
   // Inserir dados
   sheet.getRange(row, 1).setValue(id);
@@ -419,19 +424,19 @@ function addVideo(videoData) {
 }
 
 function updateVideo(videoId, videoData) {
-  const user = Session.getActiveUser().getEmail();
+  var user = Session.getActiveUser().getEmail();
   if (!isAdmin(user)) {
     throw new Error('Apenas administradores podem editar vídeos');
   }
   
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Videos');
-  const data = sheet.getDataRange().getValues();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('Videos');
+  var data = sheet.getDataRange().getValues();
   
   // Extrair ID do Vimeo da URL ou usar ID direto
-  const vimeoId = extractVimeoId(videoData.vimeoId);
+  var vimeoId = extractVimeoId(videoData.vimeoId);
   
-  for (let i = 1; i < data.length; i++) {
+  for (var i = 1; i < data.length; i++) {
     if (data[i][0] === videoId) {
       sheet.getRange(i + 1, 2).setValue(videoData.title);
       sheet.getRange(i + 1, 3).setValue("'" + vimeoId); // Força como texto
@@ -445,16 +450,16 @@ function updateVideo(videoId, videoData) {
 }
 
 function deleteVideo(videoId) {
-  const user = Session.getActiveUser().getEmail();
+  var user = Session.getActiveUser().getEmail();
   if (!isAdmin(user)) {
     throw new Error('Apenas administradores podem deletar vídeos');
   }
   
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Videos');
-  const data = sheet.getDataRange().getValues();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('Videos');
+  var data = sheet.getDataRange().getValues();
   
-  for (let i = 1; i < data.length; i++) {
+  for (var i = 1; i < data.length; i++) {
     if (data[i][0] === videoId) {
       sheet.deleteRow(i + 1);
       return { success: true };
@@ -468,27 +473,27 @@ function deleteVideo(videoId) {
 
 function getTrails() {
   try {
-    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    const sheet = ss.getSheetByName('Trails');
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName('Trails');
     
     if (!sheet) {
       Logger.log('Aba Trails não encontrada');
       return [];
     }
     
-    const data = sheet.getDataRange().getValues();
+    var data = sheet.getDataRange().getValues();
     
     if (!data || data.length <= 1) {
       Logger.log('Nenhuma trilha encontrada na planilha');
       return [];
     }
     
-    const trails = [];
-    for (let i = 1; i < data.length; i++) {
+    var trails = [];
+    for (var i = 1; i < data.length; i++) {
       // Pular linhas vazias
       if (!data[i][0]) continue;
       
-      const trailId = data[i][0];
+      var trailId = data[i][0];
       trails.push({
         id: trailId,
         name: data[i][1] || 'Sem título',
@@ -509,35 +514,41 @@ function getTrails() {
 
 function getTrailVideos(trailId) {
   try {
-    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    const sheet = ss.getSheetByName('TrailVideos');
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName('TrailVideos');
     
     if (!sheet) {
       Logger.log('Aba TrailVideos não encontrada');
       return [];
     }
     
-    const data = sheet.getDataRange().getValues();
+    var data = sheet.getDataRange().getValues();
     
     if (!data || data.length <= 1) {
       return [];
     }
     
-    const videoIds = [];
-    for (let i = 1; i < data.length; i++) {
+    var videoIds = [];
+    for (var i = 1; i < data.length; i++) {
       if (data[i][0] === trailId) {
         videoIds.push({ videoId: data[i][1], order: data[i][2] });
       }
     }
     
     // Ordenar por ordem e buscar dados dos vídeos
-    videoIds.sort((a, b) => a.order - b.order);
-    const videos = getVideos();
+    videoIds.sort(function(a, b) { return a.order - b.order; });
+    var videos = getVideos();
     
-    return videoIds.map(item => {
-      const video = videos.find(v => v.id === item.videoId);
-      return video || null;
-    }).filter(v => v !== null);
+    var trailVideos = [];
+    for (var j = 0; j < videoIds.length; j++) {
+      for (var k = 0; k < videos.length; k++) {
+        if (videos[k].id === videoIds[j].videoId) {
+          trailVideos.push(videos[k]);
+          break;
+        }
+      }
+    }
+    return trailVideos;
   } catch (error) {
     Logger.log('Erro ao buscar vídeos da trilha: ' + error.toString());
     return [];
@@ -545,15 +556,15 @@ function getTrailVideos(trailId) {
 }
 
 function addTrail(trailData) {
-  const user = Session.getActiveUser().getEmail();
+  var user = Session.getActiveUser().getEmail();
   if (!isAdmin(user)) {
     throw new Error('Apenas administradores podem criar trilhas');
   }
   
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Trails');
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('Trails');
   
-  const id = 'TRAIL_' + new Date().getTime();
+  var id = 'TRAIL_' + new Date().getTime();
   sheet.appendRow([
     id,
     trailData.name,
@@ -564,37 +575,37 @@ function addTrail(trailData) {
   
   // Adicionar vídeos à trilha
   if (trailData.videos && trailData.videos.length > 0) {
-    const trailVideosSheet = ss.getSheetByName('TrailVideos');
-    trailData.videos.forEach((videoId, index) => {
-      trailVideosSheet.appendRow([id, videoId, index]);
-    });
+    var trailVideosSheet = ss.getSheetByName('TrailVideos');
+    for (var i = 0; i < trailData.videos.length; i++) {
+      trailVideosSheet.appendRow([id, trailData.videos[i], i]);
+    }
   }
   
   return { success: true, id: id };
 }
 
 function updateTrail(trailId, trailData) {
-  const user = Session.getActiveUser().getEmail();
+  var user = Session.getActiveUser().getEmail();
   if (!isAdmin(user)) {
     throw new Error('Apenas administradores podem editar trilhas');
   }
   
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Trails');
-  const data = sheet.getDataRange().getValues();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('Trails');
+  var data = sheet.getDataRange().getValues();
   
-  for (let i = 1; i < data.length; i++) {
+  for (var i = 1; i < data.length; i++) {
     if (data[i][0] === trailId) {
       sheet.getRange(i + 1, 2).setValue(trailData.name);
       sheet.getRange(i + 1, 3).setValue(trailData.description);
       sheet.getRange(i + 1, 4).setValue(trailData.videos ? trailData.videos.length : 0);
       
       // Atualizar vídeos da trilha
-      const trailVideosSheet = ss.getSheetByName('TrailVideos');
-      const tvData = trailVideosSheet.getDataRange().getValues();
+      var trailVideosSheet = ss.getSheetByName('TrailVideos');
+      var tvData = trailVideosSheet.getDataRange().getValues();
       
       // Remover vídeos antigos
-      for (let j = tvData.length - 1; j >= 1; j--) {
+      for (var j = tvData.length - 1; j >= 1; j--) {
         if (tvData[j][0] === trailId) {
           trailVideosSheet.deleteRow(j + 1);
         }
@@ -602,9 +613,9 @@ function updateTrail(trailId, trailData) {
       
       // Adicionar novos vídeos
       if (trailData.videos && trailData.videos.length > 0) {
-        trailData.videos.forEach((videoId, index) => {
-          trailVideosSheet.appendRow([trailId, videoId, index]);
-        });
+        for (var j = 0; j < trailData.videos.length; j++) {
+          trailVideosSheet.appendRow([trailId, trailData.videos[j], j]);
+        }
       }
       
       return { success: true };
@@ -615,24 +626,24 @@ function updateTrail(trailId, trailData) {
 }
 
 function deleteTrail(trailId) {
-  const user = Session.getActiveUser().getEmail();
+  var user = Session.getActiveUser().getEmail();
   if (!isAdmin(user)) {
     throw new Error('Apenas administradores podem deletar trilhas');
   }
   
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Trails');
-  const data = sheet.getDataRange().getValues();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('Trails');
+  var data = sheet.getDataRange().getValues();
   
-  for (let i = 1; i < data.length; i++) {
+  for (var i = 1; i < data.length; i++) {
     if (data[i][0] === trailId) {
       sheet.deleteRow(i + 1);
       
       // Remover vídeos da trilha
-      const trailVideosSheet = ss.getSheetByName('TrailVideos');
-      const tvData = trailVideosSheet.getDataRange().getValues();
+      var trailVideosSheet = ss.getSheetByName('TrailVideos');
+      var tvData = trailVideosSheet.getDataRange().getValues();
       
-      for (let j = tvData.length - 1; j >= 1; j--) {
+      for (var j = tvData.length - 1; j >= 1; j--) {
         if (tvData[j][0] === trailId) {
           trailVideosSheet.deleteRow(j + 1);
         }
@@ -648,13 +659,13 @@ function deleteTrail(trailId) {
 // ==================== VISUALIZAÇÕES ====================
 
 function recordVideoView(videoId, progress, completed) {
-  const email = Session.getActiveUser().getEmail();
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('VideoViews');
-  const data = sheet.getDataRange().getValues();
+  var email = Session.getActiveUser().getEmail();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('VideoViews');
+  var data = sheet.getDataRange().getValues();
   
-  let found = false;
-  for (let i = 1; i < data.length; i++) {
+  var found = false;
+  for (var i = 1; i < data.length; i++) {
     if (data[i][0] === email && data[i][1] === videoId) {
       sheet.getRange(i + 1, 3).setValue(progress);
       sheet.getRange(i + 1, 4).setValue(completed);
@@ -670,12 +681,12 @@ function recordVideoView(videoId, progress, completed) {
   
   // Incrementar contador de visualizações do vídeo
   if (completed && !found) {
-    const videoSheet = ss.getSheetByName('Videos');
-    const videoData = videoSheet.getDataRange().getValues();
+    var videoSheet = ss.getSheetByName('Videos');
+    var videoData = videoSheet.getDataRange().getValues();
     
-    for (let i = 1; i < videoData.length; i++) {
+    for (var i = 1; i < videoData.length; i++) {
       if (videoData[i][0] === videoId) {
-        const views = (videoData[i][6] || 0) + 1;
+        var views = (videoData[i][6] || 0) + 1;
         videoSheet.getRange(i + 1, 7).setValue(views);
         
         // Dar pontos por assistir vídeo completo
@@ -691,12 +702,12 @@ function recordVideoView(videoId, progress, completed) {
 }
 
 function getUserVideoProgress(videoId) {
-  const email = Session.getActiveUser().getEmail();
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('VideoViews');
-  const data = sheet.getDataRange().getValues();
+  var email = Session.getActiveUser().getEmail();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('VideoViews');
+  var data = sheet.getDataRange().getValues();
   
-  for (let i = 1; i < data.length; i++) {
+  for (var i = 1; i < data.length; i++) {
     if (data[i][0] === email && data[i][1] === videoId) {
       return {
         progress: data[i][2] || 0,
@@ -709,13 +720,13 @@ function getUserVideoProgress(videoId) {
 }
 
 function getUserWatchedVideos() {
-  const email = Session.getActiveUser().getEmail();
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('VideoViews');
-  const data = sheet.getDataRange().getValues();
+  var email = Session.getActiveUser().getEmail();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('VideoViews');
+  var data = sheet.getDataRange().getValues();
   
-  const watchedVideos = [];
-  for (let i = 1; i < data.length; i++) {
+  var watchedVideos = [];
+  for (var i = 1; i < data.length; i++) {
     if (data[i][0] === email) {
       watchedVideos.push({
         videoId: data[i][1],
@@ -732,12 +743,12 @@ function getUserWatchedVideos() {
 // ==================== QUIZ ====================
 
 function getQuizzesByVideo(videoId) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Quizzes');
-  const data = sheet.getDataRange().getValues();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('Quizzes');
+  var data = sheet.getDataRange().getValues();
   
-  const quizzes = [];
-  for (let i = 1; i < data.length; i++) {
+  var quizzes = [];
+  for (var i = 1; i < data.length; i++) {
     if (data[i][1] === videoId) {
       quizzes.push({
         id: data[i][0],
@@ -753,15 +764,15 @@ function getQuizzesByVideo(videoId) {
 }
 
 function addQuiz(quizData) {
-  const user = Session.getActiveUser().getEmail();
+  var user = Session.getActiveUser().getEmail();
   if (!isAdmin(user)) {
     throw new Error('Apenas administradores podem adicionar quiz');
   }
   
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Quizzes');
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('Quizzes');
   
-  const id = 'QUIZ_' + new Date().getTime();
+  var id = 'QUIZ_' + new Date().getTime();
   sheet.appendRow([
     id,
     quizData.videoId,
@@ -775,21 +786,21 @@ function addQuiz(quizData) {
 }
 
 function submitQuiz(quizId, videoId, answers) {
-  const email = Session.getActiveUser().getEmail();
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var email = Session.getActiveUser().getEmail();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   
   // Buscar quiz
-  const quizSheet = ss.getSheetByName('Quizzes');
-  const quizData = quizSheet.getDataRange().getValues();
+  var quizSheet = ss.getSheetByName('Quizzes');
+  var quizData = quizSheet.getDataRange().getValues();
   
-  let correctAnswers = 0;
-  let totalQuestions = 0;
+  var correctAnswers = 0;
+  var totalQuestions = 0;
   
-  for (let i = 1; i < quizData.length; i++) {
+  for (var i = 1; i < quizData.length; i++) {
     if (quizData[i][1] === videoId) {
       totalQuestions++;
-      const quizId = quizData[i][0];
-      const correctAnswer = quizData[i][4];
+      var quizId = quizData[i][0];
+      var correctAnswer = quizData[i][4];
       
       if (answers[quizId] === correctAnswer) {
         correctAnswers++;
@@ -797,10 +808,10 @@ function submitQuiz(quizId, videoId, answers) {
     }
   }
   
-  const score = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
+  var score = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
   
   // Salvar resultado
-  const resultSheet = ss.getSheetByName('QuizResults');
+  var resultSheet = ss.getSheetByName('QuizResults');
   resultSheet.appendRow([
     email,
     quizId,
@@ -811,7 +822,7 @@ function submitQuiz(quizId, videoId, answers) {
   ]);
   
   // Dar pontos baseado no score
-  let points = 0;
+  var points = 0;
   if (score === 100) points = 20;
   else if (score >= 75) points = 15;
   else if (score >= 50) points = 10;
@@ -827,13 +838,13 @@ function submitQuiz(quizId, videoId, answers) {
 // ==================== LIKES ====================
 
 function toggleLike(videoId) {
-  const email = Session.getActiveUser().getEmail();
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Likes');
-  const data = sheet.getDataRange().getValues();
+  var email = Session.getActiveUser().getEmail();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('Likes');
+  var data = sheet.getDataRange().getValues();
   
-  let liked = false;
-  for (let i = 1; i < data.length; i++) {
+  var liked = false;
+  for (var i = 1; i < data.length; i++) {
     if (data[i][0] === email && data[i][1] === videoId) {
       sheet.deleteRow(i + 1);
       updateVideoLikeCount(videoId, -1);
@@ -849,13 +860,13 @@ function toggleLike(videoId) {
 }
 
 function updateVideoLikeCount(videoId, increment) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Videos');
-  const data = sheet.getDataRange().getValues();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('Videos');
+  var data = sheet.getDataRange().getValues();
   
-  for (let i = 1; i < data.length; i++) {
+  for (var i = 1; i < data.length; i++) {
     if (data[i][0] === videoId) {
-      const likes = (data[i][7] || 0) + increment;
+      var likes = (data[i][7] || 0) + increment;
       sheet.getRange(i + 1, 8).setValue(Math.max(0, likes));
       break;
     }
@@ -863,13 +874,13 @@ function updateVideoLikeCount(videoId, increment) {
 }
 
 function getUserLikes() {
-  const email = Session.getActiveUser().getEmail();
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Likes');
-  const data = sheet.getDataRange().getValues();
+  var email = Session.getActiveUser().getEmail();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('Likes');
+  var data = sheet.getDataRange().getValues();
   
-  const likes = [];
-  for (let i = 1; i < data.length; i++) {
+  var likes = [];
+  for (var i = 1; i < data.length; i++) {
     if (data[i][0] === email) {
       likes.push(data[i][1]);
     }
@@ -878,12 +889,12 @@ function getUserLikes() {
 }
 
 function isVideoLiked(videoId) {
-  const email = Session.getActiveUser().getEmail();
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Likes');
-  const data = sheet.getDataRange().getValues();
+  var email = Session.getActiveUser().getEmail();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('Likes');
+  var data = sheet.getDataRange().getValues();
   
-  for (let i = 1; i < data.length; i++) {
+  for (var i = 1; i < data.length; i++) {
     if (data[i][0] === email && data[i][1] === videoId) {
       return true;
     }
@@ -894,12 +905,12 @@ function isVideoLiked(videoId) {
 // ==================== RANKING ====================
 
 function getTopStudents(limit = 10) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Users');
-  const data = sheet.getDataRange().getValues();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('Users');
+  var data = sheet.getDataRange().getValues();
   
-  const students = [];
-  for (let i = 1; i < data.length; i++) {
+  var students = [];
+  for (var i = 1; i < data.length; i++) {
     if (data[i][3] !== 'admin') {
       students.push({
         email: data[i][0],
@@ -909,34 +920,46 @@ function getTopStudents(limit = 10) {
     }
   }
   
-  students.sort((a, b) => b.points - a.points);
+  students.sort(function(a, b) { return b.points - a.points; });
   return students.slice(0, limit);
 }
 
 // ==================== PROGRESSO DA TRILHA ====================
 
 function getTrailProgress(trailId) {
-  const email = Session.getActiveUser().getEmail();
-  const trail = getTrails().find(t => t.id === trailId);
+  var email = Session.getActiveUser().getEmail();
+  var trails = getTrails();
+  var trail = null;
+  for (var i = 0; i < trails.length; i++) {
+    if (trails[i].id === trailId) {
+      trail = trails[i];
+      break;
+    }
+  }
   
   if (!trail) return { progress: 0, completed: 0, total: 0 };
   
-  const trailVideos = trail.videos;
-  let completed = 0;
+  var trailVideos = trail.videos;
+  var completed = 0;
   
-  const watchedVideos = getUserWatchedVideos();
+  var watchedVideos = getUserWatchedVideos();
   
-  trailVideos.forEach(video => {
-    const watched = watchedVideos.find(w => w.videoId === video.id && w.completed);
-    if (watched) completed++;
-  });
+  for (var j = 0; j < trailVideos.length; j++) {
+    var video = trailVideos[j];
+    for (var k = 0; k < watchedVideos.length; k++) {
+      if (watchedVideos[k].videoId === video.id && watchedVideos[k].completed) {
+        completed++;
+        break;
+      }
+    }
+  }
   
-  const progress = trailVideos.length > 0 ? (completed / trailVideos.length) * 100 : 0;
+  var progress = trailVideos.length > 0 ? (completed / trailVideos.length) * 100 : 0;
   
   // Se completou a trilha, dar pontos extras
   if (progress === 100 && completed > 0) {
     // Verificar se já deu pontos antes
-    const pointsGiven = checkTrailCompletionPoints(trailId);
+    var pointsGiven = checkTrailCompletionPoints(trailId);
     if (!pointsGiven) {
       updateUserPoints(email, 50);
       saveTrailCompletionPoints(trailId);
@@ -951,17 +974,17 @@ function getTrailProgress(trailId) {
 }
 
 function checkTrailCompletionPoints(trailId) {
-  const email = Session.getActiveUser().getEmail();
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  let sheet = ss.getSheetByName('TrailCompletion');
+  var email = Session.getActiveUser().getEmail();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('TrailCompletion');
   
   if (!sheet) {
     sheet = ss.insertSheet('TrailCompletion');
     sheet.appendRow(['Email', 'TrailID', 'Data']);
   }
   
-  const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
     if (data[i][0] === email && data[i][1] === trailId) {
       return true;
     }
@@ -970,9 +993,9 @@ function checkTrailCompletionPoints(trailId) {
 }
 
 function saveTrailCompletionPoints(trailId) {
-  const email = Session.getActiveUser().getEmail();
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  let sheet = ss.getSheetByName('TrailCompletion');
+  var email = Session.getActiveUser().getEmail();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('TrailCompletion');
   
   if (!sheet) {
     sheet = ss.insertSheet('TrailCompletion');
@@ -985,32 +1008,32 @@ function saveTrailCompletionPoints(trailId) {
 // ==================== MÉTRICAS ====================
 
 function getAdminMetrics() {
-  const user = Session.getActiveUser().getEmail();
+  var user = Session.getActiveUser().getEmail();
   if (!isAdmin(user)) {
     throw new Error('Apenas administradores podem ver métricas');
   }
   
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   
   // Total de usuários
-  const usersSheet = ss.getSheetByName('Users');
-  const totalUsers = usersSheet.getDataRange().getValues().length - 1;
+  var usersSheet = ss.getSheetByName('Users');
+  var totalUsers = usersSheet.getDataRange().getValues().length - 1;
   
   // Total de vídeos
-  const videosSheet = ss.getSheetByName('Videos');
-  const totalVideos = videosSheet.getDataRange().getValues().length - 1;
+  var videosSheet = ss.getSheetByName('Videos');
+  var totalVideos = videosSheet.getDataRange().getValues().length - 1;
   
   // Total de trilhas
-  const trailsSheet = ss.getSheetByName('Trails');
-  const totalTrails = trailsSheet.getDataRange().getValues().length - 1;
+  var trailsSheet = ss.getSheetByName('Trails');
+  var totalTrails = trailsSheet.getDataRange().getValues().length - 1;
   
   // Total de visualizações
-  const viewsSheet = ss.getSheetByName('VideoViews');
-  const totalViews = viewsSheet.getDataRange().getValues().length - 1;
+  var viewsSheet = ss.getSheetByName('VideoViews');
+  var totalViews = viewsSheet.getDataRange().getValues().length - 1;
   
   // Total de quiz completados
-  const quizSheet = ss.getSheetByName('QuizResults');
-  const totalQuizzes = quizSheet.getDataRange().getValues().length - 1;
+  var quizSheet = ss.getSheetByName('QuizResults');
+  var totalQuizzes = quizSheet.getDataRange().getValues().length - 1;
   
   return {
     totalUsers: totalUsers,
