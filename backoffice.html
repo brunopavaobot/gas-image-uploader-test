@@ -942,16 +942,22 @@
     }
 
     async function loadVideos() {
-      google.script.run.withSuccessHandler(function(videos) {
-        allVideos = videos;
-        displayVideos(videos);
-      }).getVideos();
+      google.script.run
+        .withSuccessHandler(function(videos) {
+          allVideos = videos;
+          displayVideos(videos);
+        })
+        .withFailureHandler(function(error) {
+          console.error('Erro ao carregar vídeos:', error);
+          showToast('Erro ao carregar vídeos: ' + error.message, 'error');
+        })
+        .getVideos();
     }
 
     function displayVideos(videos) {
       var container = document.getElementById('videosList');
       
-      if (videos.length === 0) {
+      if (!videos || videos.length === 0) {
         container.innerHTML = '<div class="alert alert-warning">' +
           '<i class="fas fa-info-circle"></i> ' +
           'Nenhum vídeo cadastrado ainda. Clique em "Adicionar Vídeo" para começar.' +
@@ -959,37 +965,56 @@
         return;
       }
       
-      var html = '';
-      for (var i = 0; i < videos.length; i++) {
-        var video = videos[i];
-        var thumbHtml = video.thumbnail ? 
-          '<img src="' + video.thumbnail + '" alt="' + video.title + '">' : 
-          '<i class="fas fa-video" style="padding: 30px; font-size: 24px; color: var(--text-secondary);"></i>';
-        
-        html += '<div class="video-item">' +
-          '<div class="video-item-thumb">' + thumbHtml + '</div>' +
-          '<div class="video-item-info">' +
-            '<div class="video-item-title">' + video.title + '</div>' +
-            '<div class="video-item-meta">' +
-              '<i class="fas fa-eye"></i> ' + video.views + ' visualizações' +
-              '<span style="margin: 0 8px;">•</span>' +
-              '<i class="fas fa-heart"></i> ' + video.likes + ' curtidas' +
-              '<span style="margin: 0 8px;">•</span>' +
-              'ID: ' + video.vimeoId +
+      try {
+        var html = '';
+        for (var i = 0; i < videos.length; i++) {
+          var video = videos[i];
+          
+          if (!video || !video.id) {
+            console.warn('Vídeo inválido no índice ' + i, video);
+            continue;
+          }
+          
+          var safeTitle = video.title || 'Sem título';
+          var safeVimeoId = video.vimeoId || 'N/A';
+          var safeViews = video.views || 0;
+          var safeLikes = video.likes || 0;
+          
+          var thumbHtml = video.thumbnail ? 
+            '<img src="' + video.thumbnail + '" alt="' + safeTitle.replace(/"/g, '&quot;') + '">' : 
+            '<i class="fas fa-video" style="padding: 30px; font-size: 24px; color: var(--text-secondary);"></i>';
+          
+          html += '<div class="video-item">' +
+            '<div class="video-item-thumb">' + thumbHtml + '</div>' +
+            '<div class="video-item-info">' +
+              '<div class="video-item-title">' + safeTitle + '</div>' +
+              '<div class="video-item-meta">' +
+                '<i class="fas fa-eye"></i> ' + safeViews + ' visualizações' +
+                '<span style="margin: 0 8px;">•</span>' +
+                '<i class="fas fa-heart"></i> ' + safeLikes + ' curtidas' +
+                '<span style="margin: 0 8px;">•</span>' +
+                'ID: ' + safeVimeoId +
+              '</div>' +
             '</div>' +
-          '</div>' +
-          '<div class="video-item-actions">' +
-            '<button class="btn btn-primary btn-sm" onclick="openEditVideoModal(\'' + video.id + '\')" style="margin-right: 8px;">' +
-              '<i class="fas fa-edit"></i>' +
-            '</button>' +
-            '<button class="btn btn-danger btn-sm" onclick="deleteVideo(\'' + video.id + '\')">' +
-              '<i class="fas fa-trash"></i>' +
-            '</button>' +
-          '</div>' +
-        '</div>';
+            '<div class="video-item-actions">' +
+              '<button class="btn btn-primary btn-sm" onclick="openEditVideoModal(\'' + video.id + '\')" style="margin-right: 8px;">' +
+                '<i class="fas fa-edit"></i>' +
+              '</button>' +
+              '<button class="btn btn-danger btn-sm" onclick="deleteVideo(\'' + video.id + '\')">' +
+                '<i class="fas fa-trash"></i>' +
+              '</button>' +
+            '</div>' +
+          '</div>';
+        }
+        
+        container.innerHTML = html;
+      } catch (error) {
+        console.error('Erro ao exibir vídeos:', error);
+        container.innerHTML = '<div class="alert alert-warning">' +
+          '<i class="fas fa-exclamation-triangle"></i> ' +
+          'Erro ao exibir vídeos. Verifique o console para mais detalhes.' +
+          '</div>';
       }
-      
-      container.innerHTML = html;
     }
 
     function openAddVideoModal() {
@@ -1058,7 +1083,14 @@
       var preview = document.getElementById('videoPreview');
       
       if (thumbnail) {
-        preview.innerHTML = '<img src="' + thumbnail + '" alt="Preview" onerror="this.parentElement.innerHTML=\'<i class=\\'fas fa-exclamation-triangle\\'></i>\'">';
+        var img = document.createElement('img');
+        img.src = thumbnail;
+        img.alt = 'Preview';
+        img.onerror = function() {
+          preview.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+        };
+        preview.innerHTML = '';
+        preview.appendChild(img);
       } else {
         preview.innerHTML = '<i class="fas fa-image"></i>';
       }

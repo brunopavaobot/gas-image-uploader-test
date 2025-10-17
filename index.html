@@ -689,25 +689,40 @@
         return;
       }
       
-      var html = '';
-      videos.forEach(function(video) {
-        var thumbnailHtml = video.thumbnail ? 
-          '<img src="' + video.thumbnail + '" alt="' + video.title + '">' : 
-          '<i class="fas fa-play-circle"></i>';
+      try {
+        var html = '';
+        for (var i = 0; i < videos.length; i++) {
+          var video = videos[i];
+          
+          if (!video || !video.id) {
+            console.warn('Vídeo inválido no índice ' + i, video);
+            continue;
+          }
+          
+          var safeTitle = (video.title || 'Sem título').replace(/"/g, '&quot;');
+          var safeThumbnailAlt = safeTitle.replace(/'/g, '&#39;');
+          
+          var thumbnailHtml = video.thumbnail ? 
+            '<img src="' + video.thumbnail + '" alt="' + safeThumbnailAlt + '">' : 
+            '<i class="fas fa-play-circle"></i>';
+          
+          html += '<div class="video-card" onclick="openVideo(\'' + video.id + '\')">' +
+            '<div class="video-thumbnail">' + thumbnailHtml +
+            '<div class="video-play-icon"><i class="fas fa-play"></i></div>' +
+            '</div>' +
+            '<div class="video-info">' +
+            '<div class="video-title">' + safeTitle + '</div>' +
+            '<div class="video-meta">' +
+            '<span><i class="fas fa-eye"></i> ' + (video.views || 0) + '</span>' +
+            '<span><i class="fas fa-heart"></i> ' + (video.likes || 0) + '</span>' +
+            '</div></div></div>';
+        }
         
-        html += '<div class="video-card" onclick="openVideo(\'' + video.id + '\')">' +
-          '<div class="video-thumbnail">' + thumbnailHtml +
-          '<div class="video-play-icon"><i class="fas fa-play"></i></div>' +
-          '</div>' +
-          '<div class="video-info">' +
-          '<div class="video-title">' + video.title + '</div>' +
-          '<div class="video-meta">' +
-          '<span><i class="fas fa-eye"></i> ' + (video.views || 0) + '</span>' +
-          '<span><i class="fas fa-heart"></i> ' + (video.likes || 0) + '</span>' +
-          '</div></div></div>';
-      });
-      
-      grid.innerHTML = html;
+        grid.innerHTML = html;
+      } catch (error) {
+        console.error('Erro ao exibir vídeos:', error);
+        grid.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Erro ao carregar vídeos</p></div>';
+      }
     }
 
     function openVideo(videoId) {
