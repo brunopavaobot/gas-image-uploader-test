@@ -4,8 +4,7 @@ var SPREADSHEET_ID = '1NVBid2fXLNuIJNV08zUEnTo7YwZJSZoOw4t07VNbAbg';
 
 // Lista de emails dos administradores
 var ADMIN_EMAILS = [
-  'bruno.pavao@grupoboticario.com.br',
-  // Adicione mais emails de admin aqui
+  'bruno.pavao@grupoboticario.com.br'
 ];
 
 // ==================== DIAGNÓSTICO ====================
@@ -50,6 +49,40 @@ function diagnosticar() {
   
   Logger.log(JSON.stringify(resultado, null, 2));
   return resultado;
+}
+
+function diagnosticarVideosDetalhado() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('Videos');
+  var data = sheet.getDataRange().getValues();
+  
+  Logger.log('========== DIAGNÓSTICO DETALHADO DE VÍDEOS ==========');
+  Logger.log('Total de linhas na planilha: ' + data.length);
+  Logger.log('Headers: ' + JSON.stringify(data[0]));
+  Logger.log('');
+  
+  for (var i = 1; i < data.length; i++) {
+    Logger.log('--- LINHA ' + (i + 1) + ' ---');
+    Logger.log('ID: "' + data[i][0] + '" (tipo: ' + typeof data[i][0] + ', vazio: ' + (!data[i][0]) + ')');
+    Logger.log('Título: "' + data[i][1] + '"');
+    Logger.log('VimeoID: "' + data[i][2] + '"');
+    Logger.log('Thumbnail: "' + data[i][3] + '"');
+    Logger.log('Descrição: "' + data[i][4] + '"');
+    Logger.log('Duração: "' + data[i][5] + '"');
+    Logger.log('Views: "' + data[i][6] + '"');
+    Logger.log('Likes: "' + data[i][7] + '"');
+    Logger.log('Data: "' + data[i][8] + '" (tipo: ' + typeof data[i][8] + ')');
+    Logger.log('');
+  }
+  
+  Logger.log('========== TESTANDO getVideos() ==========');
+  var videos = getVideos();
+  Logger.log('Total de vídeos retornados por getVideos(): ' + videos.length);
+  for (var j = 0; j < videos.length; j++) {
+    Logger.log('Vídeo ' + (j + 1) + ': ' + JSON.stringify(videos[j]));
+  }
+  
+  Logger.log('========== FIM DO DIAGNÓSTICO ==========');
 }
 
 // ==================== CORREÇÃO ====================
@@ -221,19 +254,22 @@ function include(filename) {
 function initializeSheets() {
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   
-  var sheets = {
-    'Users': ['Email', 'Nome', 'Pontos', 'Role', 'DataCriacao'],
-    'Videos': ['ID', 'Titulo', 'VimeoID', 'Thumbnail', 'Descricao', 'Duracao', 'Visualizacoes', 'Likes', 'DataCriacao'],
-    'Trails': ['ID', 'Nome', 'Descricao', 'TotalVideos', 'DataCriacao'],
-    'TrailVideos': ['TrailID', 'VideoID', 'Ordem'],
-    'VideoViews': ['Email', 'VideoID', 'Progresso', 'Completado', 'DataVisualizacao'],
-    'Quizzes': ['ID', 'VideoID', 'Pergunta', 'Opcoes', 'RespostaCorreta', 'Tempo'],
-    'QuizResults': ['Email', 'QuizID', 'VideoID', 'Respostas', 'Pontuacao', 'DataResposta'],
-    'Likes': ['Email', 'VideoID', 'Data'],
-    'Config': ['Chave', 'Valor']
-  };
+  var sheetsList = [
+    { name: 'Users', headers: ['Email', 'Nome', 'Pontos', 'Role', 'DataCriacao'] },
+    { name: 'Videos', headers: ['ID', 'Titulo', 'VimeoID', 'Thumbnail', 'Descricao', 'Duracao', 'Visualizacoes', 'Likes', 'DataCriacao'] },
+    { name: 'Trails', headers: ['ID', 'Nome', 'Descricao', 'TotalEtapas', 'DataCriacao'] },
+    { name: 'TrailSteps', headers: ['TrailID', 'Ordem', 'TipoEtapa', 'ContentID'] },
+    { name: 'VideoViews', headers: ['Email', 'VideoID', 'Progresso', 'Completado', 'DataVisualizacao'] },
+    { name: 'QuizSets', headers: ['ID', 'Nome', 'Descricao', 'DataCriacao'] },
+    { name: 'QuizQuestions', headers: ['ID', 'QuizSetID', 'Pergunta', 'Opcoes', 'RespostaCorreta', 'Ordem'] },
+    { name: 'QuizResults', headers: ['Email', 'QuizSetID', 'Respostas', 'Pontuacao', 'DataResposta'] },
+    { name: 'Likes', headers: ['Email', 'VideoID', 'Data'] },
+    { name: 'Config', headers: ['Chave', 'Valor'] }
+  ];
   
-  for (var [sheetName, headers] of Object.entries(sheets)) {
+  for (var i = 0; i < sheetsList.length; i++) {
+    var sheetName = sheetsList[i].name;
+    var headers = sheetsList[i].headers;
     var sheet = ss.getSheetByName(sheetName);
     if (!sheet) {
       sheet = ss.insertSheet(sheetName);
@@ -273,7 +309,7 @@ function getUserName(email) {
   // Criar novo usuário
   var name = email.split('@')[0];
   var role = isAdmin(email) ? 'admin' : 'student';
-  sheet.appendRow([email, name, 0, role, new Date()]);
+  sheet.appendRow([email, name, 0, role, formatarDataComoTexto()]);
   return name;
 }
 
@@ -305,6 +341,18 @@ function updateUserPoints(email, points) {
 }
 
 // ==================== VÍDEOS ====================
+
+// Função auxiliar para formatar data como STRING (evita auto-formatação do Sheets)
+function formatarDataComoTexto(data) {
+  if (!data) data = new Date();
+  var dia = ('0' + data.getDate()).slice(-2);
+  var mes = ('0' + (data.getMonth() + 1)).slice(-2);
+  var ano = data.getFullYear();
+  var hora = ('0' + data.getHours()).slice(-2);
+  var min = ('0' + data.getMinutes()).slice(-2);
+  var seg = ('0' + data.getSeconds()).slice(-2);
+  return dia + '/' + mes + '/' + ano + ' ' + hora + ':' + min + ':' + seg;
+}
 
 // Função auxiliar para extrair ID do Vimeo de URL completa
 function extractVimeoId(input) {
@@ -357,14 +405,35 @@ function getVideos() {
     
     var videos = [];
     for (var i = 1; i < data.length; i++) {
-      // Pular linhas vazias
-      if (!data[i][0]) continue;
+      // Pular linhas vazias - verificar se ID existe e não está vazio
+      var videoId = data[i][0];
+      if (!videoId || videoId === '' || videoId === null || videoId === undefined) {
+        Logger.log('Pulando linha ' + (i + 1) + ' - ID vazio ou inválido');
+        continue;
+      }
       
       // Limpar VimeoID (remover apóstrofo se existir e converter para string)
-      var vimeoId = String(data[i][2] || '').replace(/^'/, '');
+      var vimeoIdRaw = data[i][2];
+      var vimeoId = '';
+      if (vimeoIdRaw !== null && vimeoIdRaw !== undefined) {
+        vimeoId = String(vimeoIdRaw).replace(/^'/, '');
+      }
+      
+      // Processar data de forma robusta (aceita string, Date object, ou vazio)
+      var createdAt = data[i][8];
+      var createdAtStr = '';
+      if (createdAt) {
+        if (typeof createdAt === 'object' && createdAt.getTime) {
+          // É um Date object
+          createdAtStr = createdAt.toLocaleString('pt-BR');
+        } else {
+          // É string ou outro formato
+          createdAtStr = String(createdAt);
+        }
+      }
       
       videos.push({
-        id: data[i][0],
+        id: String(videoId),
         title: data[i][1] || 'Sem título',
         vimeoId: vimeoId,
         thumbnail: data[i][3] || '',
@@ -372,7 +441,7 @@ function getVideos() {
         duration: data[i][5] || 0,
         views: data[i][6] || 0,
         likes: data[i][7] || 0,
-        createdAt: data[i][8]
+        createdAt: createdAtStr
       });
     }
     
@@ -380,6 +449,7 @@ function getVideos() {
     return videos;
   } catch (error) {
     Logger.log('Erro ao buscar vídeos: ' + error.toString());
+    Logger.log('Stack: ' + error.stack);
     return [];
   }
 }
@@ -409,16 +479,21 @@ function addVideo(videoData) {
   var id = 'VID_' + new Date().getTime();
   var row = sheet.getLastRow() + 1;
   
-  // Inserir dados
-  sheet.getRange(row, 1).setValue(id);
-  sheet.getRange(row, 2).setValue(videoData.title);
-  sheet.getRange(row, 3).setValue("'" + vimeoId); // Força como texto com apóstrofo
-  sheet.getRange(row, 4).setValue(videoData.thumbnail || '');
-  sheet.getRange(row, 5).setValue(videoData.description);
-  sheet.getRange(row, 6).setValue(videoData.duration || 0);
-  sheet.getRange(row, 7).setValue(0); // views
-  sheet.getRange(row, 8).setValue(0); // likes
-  sheet.getRange(row, 9).setValue(new Date());
+  // Inserir dados com data formatada como STRING
+  sheet.appendRow([
+    id,
+    videoData.title,
+    "'" + vimeoId,
+    videoData.thumbnail || '',
+    videoData.description || '',
+    videoData.duration || 0,
+    0, // views
+    0, // likes
+    formatarDataComoTexto() // String formatada
+  ]);
+  
+  // Forçar célula da data como TEXTO
+  sheet.getRange(row, 9).setNumberFormat('@');
   
   return { success: true, id: id, vimeoId: vimeoId };
 }
@@ -490,17 +565,31 @@ function getTrails() {
     
     var trails = [];
     for (var i = 1; i < data.length; i++) {
-      // Pular linhas vazias
-      if (!data[i][0]) continue;
-      
+      // Pular linhas vazias - verificação robusta de ID
       var trailId = data[i][0];
+      if (!trailId || trailId === '' || trailId === null || trailId === undefined) {
+        Logger.log('Pulando linha ' + (i + 1) + ' - ID de trilha vazio ou inválido');
+        continue;
+      }
+      
+      // Processar data de forma robusta (aceita string, Date object, ou vazio)
+      var createdAt = data[i][4];
+      var createdAtStr = '';
+      if (createdAt) {
+        if (typeof createdAt === 'object' && createdAt.getTime) {
+          createdAtStr = createdAt.toLocaleString('pt-BR');
+        } else {
+          createdAtStr = String(createdAt);
+        }
+      }
+      
       trails.push({
-        id: trailId,
+        id: String(trailId),
         name: data[i][1] || 'Sem título',
         description: data[i][2] || '',
-        totalVideos: data[i][3] || 0,
-        createdAt: data[i][4],
-        videos: getTrailVideos(trailId)
+        totalSteps: data[i][3] || 0,
+        createdAt: createdAtStr,
+        steps: getTrailSteps(trailId)
       });
     }
     
@@ -508,17 +597,18 @@ function getTrails() {
     return trails;
   } catch (error) {
     Logger.log('Erro ao buscar trilhas: ' + error.toString());
+    Logger.log('Stack: ' + error.stack);
     return [];
   }
 }
 
-function getTrailVideos(trailId) {
+function getTrailSteps(trailId) {
   try {
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheet = ss.getSheetByName('TrailVideos');
+    var sheet = ss.getSheetByName('TrailSteps');
     
     if (!sheet) {
-      Logger.log('Aba TrailVideos não encontrada');
+      Logger.log('Aba TrailSteps não encontrada');
       return [];
     }
     
@@ -528,29 +618,60 @@ function getTrailVideos(trailId) {
       return [];
     }
     
-    var videoIds = [];
+    var steps = [];
     for (var i = 1; i < data.length; i++) {
       if (data[i][0] === trailId) {
-        videoIds.push({ videoId: data[i][1], order: data[i][2] });
+        var stepType = data[i][2]; // 'video' ou 'quiz'
+        var contentId = data[i][3];
+        var order = data[i][1];
+        
+        steps.push({
+          order: order,
+          type: stepType,
+          contentId: contentId
+        });
       }
     }
     
-    // Ordenar por ordem e buscar dados dos vídeos
-    videoIds.sort(function(a, b) { return a.order - b.order; });
-    var videos = getVideos();
+    // Ordenar por ordem
+    steps.sort(function(a, b) { return a.order - b.order; });
     
-    var trailVideos = [];
-    for (var j = 0; j < videoIds.length; j++) {
-      for (var k = 0; k < videos.length; k++) {
-        if (videos[k].id === videoIds[j].videoId) {
-          trailVideos.push(videos[k]);
-          break;
+    // Buscar dados completos de cada etapa
+    var stepsWithData = [];
+    var videos = getVideos();
+    var quizSets = getQuizSets();
+    
+    for (var j = 0; j < steps.length; j++) {
+      var step = steps[j];
+      
+      if (step.type === 'video') {
+        for (var k = 0; k < videos.length; k++) {
+          if (videos[k].id === step.contentId) {
+            stepsWithData.push({
+              order: step.order,
+              type: 'video',
+              data: videos[k]
+            });
+            break;
+          }
+        }
+      } else if (step.type === 'quiz') {
+        for (var m = 0; m < quizSets.length; m++) {
+          if (quizSets[m].id === step.contentId) {
+            stepsWithData.push({
+              order: step.order,
+              type: 'quiz',
+              data: quizSets[m]
+            });
+            break;
+          }
         }
       }
     }
-    return trailVideos;
+    
+    return stepsWithData;
   } catch (error) {
-    Logger.log('Erro ao buscar vídeos da trilha: ' + error.toString());
+    Logger.log('Erro ao buscar etapas da trilha: ' + error.toString());
     return [];
   }
 }
@@ -569,15 +690,16 @@ function addTrail(trailData) {
     id,
     trailData.name,
     trailData.description,
-    trailData.videos ? trailData.videos.length : 0,
-    new Date()
+    trailData.steps ? trailData.steps.length : 0,
+    formatarDataComoTexto()
   ]);
   
-  // Adicionar vídeos à trilha
-  if (trailData.videos && trailData.videos.length > 0) {
-    var trailVideosSheet = ss.getSheetByName('TrailVideos');
-    for (var i = 0; i < trailData.videos.length; i++) {
-      trailVideosSheet.appendRow([id, trailData.videos[i], i]);
+  // Adicionar etapas à trilha (vídeos e quizzes intercalados)
+  if (trailData.steps && trailData.steps.length > 0) {
+    var stepsSheet = ss.getSheetByName('TrailSteps');
+    for (var i = 0; i < trailData.steps.length; i++) {
+      var step = trailData.steps[i];
+      stepsSheet.appendRow([id, i, step.type, step.contentId]);
     }
   }
   
@@ -598,23 +720,24 @@ function updateTrail(trailId, trailData) {
     if (data[i][0] === trailId) {
       sheet.getRange(i + 1, 2).setValue(trailData.name);
       sheet.getRange(i + 1, 3).setValue(trailData.description);
-      sheet.getRange(i + 1, 4).setValue(trailData.videos ? trailData.videos.length : 0);
+      sheet.getRange(i + 1, 4).setValue(trailData.steps ? trailData.steps.length : 0);
       
-      // Atualizar vídeos da trilha
-      var trailVideosSheet = ss.getSheetByName('TrailVideos');
-      var tvData = trailVideosSheet.getDataRange().getValues();
+      // Atualizar etapas da trilha
+      var stepsSheet = ss.getSheetByName('TrailSteps');
+      var stepsData = stepsSheet.getDataRange().getValues();
       
-      // Remover vídeos antigos
-      for (var j = tvData.length - 1; j >= 1; j--) {
-        if (tvData[j][0] === trailId) {
-          trailVideosSheet.deleteRow(j + 1);
+      // Remover etapas antigas
+      for (var j = stepsData.length - 1; j >= 1; j--) {
+        if (stepsData[j][0] === trailId) {
+          stepsSheet.deleteRow(j + 1);
         }
       }
       
-      // Adicionar novos vídeos
-      if (trailData.videos && trailData.videos.length > 0) {
-        for (var j = 0; j < trailData.videos.length; j++) {
-          trailVideosSheet.appendRow([trailId, trailData.videos[j], j]);
+      // Adicionar novas etapas
+      if (trailData.steps && trailData.steps.length > 0) {
+        for (var k = 0; k < trailData.steps.length; k++) {
+          var step = trailData.steps[k];
+          stepsSheet.appendRow([trailId, k, step.type, step.contentId]);
         }
       }
       
@@ -639,13 +762,13 @@ function deleteTrail(trailId) {
     if (data[i][0] === trailId) {
       sheet.deleteRow(i + 1);
       
-      // Remover vídeos da trilha
-      var trailVideosSheet = ss.getSheetByName('TrailVideos');
-      var tvData = trailVideosSheet.getDataRange().getValues();
+      // Remover etapas da trilha
+      var stepsSheet = ss.getSheetByName('TrailSteps');
+      var stepsData = stepsSheet.getDataRange().getValues();
       
-      for (var j = tvData.length - 1; j >= 1; j--) {
-        if (tvData[j][0] === trailId) {
-          trailVideosSheet.deleteRow(j + 1);
+      for (var j = stepsData.length - 1; j >= 1; j--) {
+        if (stepsData[j][0] === trailId) {
+          stepsSheet.deleteRow(j + 1);
         }
       }
       
@@ -654,6 +777,66 @@ function deleteTrail(trailId) {
   }
   
   throw new Error('Trilha não encontrada');
+}
+
+function getTrailProgress(trailId) {
+  var email = Session.getActiveUser().getEmail();
+  var trail = null;
+  
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var trailsSheet = ss.getSheetByName('Trails');
+  var trailsData = trailsSheet.getDataRange().getValues();
+  
+  for (var i = 1; i < trailsData.length; i++) {
+    if (trailsData[i][0] === trailId) {
+      trail = {
+        id: trailsData[i][0],
+        totalSteps: trailsData[i][3] || 0
+      };
+      break;
+    }
+  }
+  
+  if (!trail) {
+    return { completedSteps: 0, totalSteps: 0, percentage: 0 };
+  }
+  
+  var steps = getTrailSteps(trailId);
+  var completedSteps = 0;
+  
+  var videoViewsSheet = ss.getSheetByName('VideoViews');
+  var videoViewsData = videoViewsSheet.getDataRange().getValues();
+  
+  var quizResultsSheet = ss.getSheetByName('QuizResults');
+  var quizResultsData = quizResultsSheet.getDataRange().getValues();
+  
+  for (var i = 0; i < steps.length; i++) {
+    var step = steps[i];
+    
+    if (step.type === 'video') {
+      for (var j = 1; j < videoViewsData.length; j++) {
+        if (videoViewsData[j][0] === email && videoViewsData[j][1] === step.contentId && videoViewsData[j][3] === true) {
+          completedSteps++;
+          break;
+        }
+      }
+    } else if (step.type === 'quiz') {
+      for (var k = 1; k < quizResultsData.length; k++) {
+        if (quizResultsData[k][0] === email && quizResultsData[k][1] === step.contentId) {
+          completedSteps++;
+          break;
+        }
+      }
+    }
+  }
+  
+  var percentage = trail.totalSteps > 0 ? (completedSteps / trail.totalSteps) * 100 : 0;
+  
+  return {
+    completedSteps: completedSteps,
+    totalSteps: trail.totalSteps,
+    percentage: Math.round(percentage)
+  };
 }
 
 // ==================== VISUALIZAÇÕES ====================
@@ -669,14 +852,14 @@ function recordVideoView(videoId, progress, completed) {
     if (data[i][0] === email && data[i][1] === videoId) {
       sheet.getRange(i + 1, 3).setValue(progress);
       sheet.getRange(i + 1, 4).setValue(completed);
-      sheet.getRange(i + 1, 5).setValue(new Date());
+      sheet.getRange(i + 1, 5).setValue(formatarDataComoTexto());
       found = true;
       break;
     }
   }
   
   if (!found) {
-    sheet.appendRow([email, videoId, progress, completed, new Date()]);
+    sheet.appendRow([email, videoId, progress, completed, formatarDataComoTexto()]);
   }
   
   // Incrementar contador de visualizações do vídeo
@@ -728,11 +911,22 @@ function getUserWatchedVideos() {
   var watchedVideos = [];
   for (var i = 1; i < data.length; i++) {
     if (data[i][0] === email) {
+      // Processar data de forma robusta
+      var viewDate = data[i][4];
+      var viewDateStr = '';
+      if (viewDate) {
+        if (typeof viewDate === 'object' && viewDate.getTime) {
+          viewDateStr = viewDate.toLocaleString('pt-BR');
+        } else {
+          viewDateStr = String(viewDate);
+        }
+      }
+      
       watchedVideos.push({
         videoId: data[i][1],
-        progress: data[i][2],
-        completed: data[i][3],
-        date: data[i][4]
+        progress: data[i][2] || 0,
+        completed: data[i][3] || false,
+        date: viewDateStr
       });
     }
   }
@@ -818,7 +1012,7 @@ function submitQuiz(quizId, videoId, answers) {
     videoId,
     JSON.stringify(answers),
     score,
-    new Date()
+    formatarDataComoTexto()
   ]);
   
   // Dar pontos baseado no score
@@ -833,6 +1027,193 @@ function submitQuiz(quizId, videoId, answers) {
   }
   
   return { success: true, score: score, points: points };
+}
+
+// ==================== QUIZ SETS E PERGUNTAS ====================
+
+function getQuizSets() {
+  try {
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName('QuizSets');
+    
+    if (!sheet) return [];
+    
+    var data = sheet.getDataRange().getValues();
+    if (!data || data.length <= 1) return [];
+    
+    var quizSets = [];
+    for (var i = 1; i < data.length; i++) {
+      var quizSetId = data[i][0];
+      if (!quizSetId) continue;
+      
+      var createdAt = data[i][3];
+      var createdAtStr = '';
+      if (createdAt) {
+        if (typeof createdAt === 'object' && createdAt.getTime) {
+          createdAtStr = createdAt.toLocaleString('pt-BR');
+        } else {
+          createdAtStr = String(createdAt);
+        }
+      }
+      
+      quizSets.push({
+        id: String(quizSetId),
+        name: data[i][1] || 'Sem título',
+        description: data[i][2] || '',
+        createdAt: createdAtStr,
+        questions: getQuizQuestions(quizSetId)
+      });
+    }
+    
+    return quizSets;
+  } catch (error) {
+    Logger.log('Erro ao buscar quiz sets: ' + error.toString());
+    return [];
+  }
+}
+
+function getQuizQuestions(quizSetId) {
+  try {
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName('QuizQuestions');
+    
+    if (!sheet) return [];
+    
+    var data = sheet.getDataRange().getValues();
+    if (!data || data.length <= 1) return [];
+    
+    var questions = [];
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][1] === quizSetId) {
+        questions.push({
+          id: data[i][0],
+          quizSetId: data[i][1],
+          question: data[i][2],
+          options: JSON.parse(data[i][3] || '[]'),
+          correctAnswer: data[i][4],
+          order: data[i][5] || questions.length
+        });
+      }
+    }
+    
+    questions.sort(function(a, b) { return a.order - b.order; });
+    return questions;
+  } catch (error) {
+    Logger.log('Erro ao buscar perguntas: ' + error.toString());
+    return [];
+  }
+}
+
+function addQuizSet(quizSetData) {
+  var user = Session.getActiveUser().getEmail();
+  if (!isAdmin(user)) {
+    throw new Error('Apenas administradores podem criar quiz sets');
+  }
+  
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('QuizSets');
+  
+  var id = 'QUIZSET_' + new Date().getTime();
+  sheet.appendRow([
+    id,
+    quizSetData.name,
+    quizSetData.description || '',
+    formatarDataComoTexto()
+  ]);
+  
+  return { success: true, id: id };
+}
+
+function addQuizQuestion(questionData) {
+  var user = Session.getActiveUser().getEmail();
+  if (!isAdmin(user)) {
+    throw new Error('Apenas administradores podem adicionar perguntas');
+  }
+  
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('QuizQuestions');
+  
+  var id = 'Q_' + new Date().getTime();
+  sheet.appendRow([
+    id,
+    questionData.quizSetId,
+    questionData.question,
+    JSON.stringify(questionData.options),
+    questionData.correctAnswer,
+    questionData.order || 0
+  ]);
+  
+  return { success: true, id: id };
+}
+
+function deleteQuizSet(quizSetId) {
+  var user = Session.getActiveUser().getEmail();
+  if (!isAdmin(user)) {
+    throw new Error('Apenas administradores podem deletar quiz sets');
+  }
+  
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  
+  var sheet = ss.getSheetByName('QuizSets');
+  var data = sheet.getDataRange().getValues();
+  
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === quizSetId) {
+      sheet.deleteRow(i + 1);
+      
+      var questionsSheet = ss.getSheetByName('QuizQuestions');
+      var questionsData = questionsSheet.getDataRange().getValues();
+      
+      for (var j = questionsData.length - 1; j >= 1; j--) {
+        if (questionsData[j][1] === quizSetId) {
+          questionsSheet.deleteRow(j + 1);
+        }
+      }
+      
+      return { success: true };
+    }
+  }
+  
+  throw new Error('Quiz set não encontrado');
+}
+
+function submitQuizSetAnswers(quizSetId, answers) {
+  var email = Session.getActiveUser().getEmail();
+  var questions = getQuizQuestions(quizSetId);
+  
+  var correctAnswers = 0;
+  var totalQuestions = questions.length;
+  
+  for (var i = 0; i < questions.length; i++) {
+    var question = questions[i];
+    if (answers[question.id] === question.correctAnswer) {
+      correctAnswers++;
+    }
+  }
+  
+  var score = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
+  
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var resultSheet = ss.getSheetByName('QuizResults');
+  resultSheet.appendRow([
+    email,
+    quizSetId,
+    JSON.stringify(answers),
+    score,
+    formatarDataComoTexto()
+  ]);
+  
+  var points = 0;
+  if (score === 100) points = 20;
+  else if (score >= 75) points = 15;
+  else if (score >= 50) points = 10;
+  else if (score >= 25) points = 5;
+  
+  if (points > 0) {
+    updateUserPoints(email, points);
+  }
+  
+  return { success: true, score: score, points: points, correctAnswers: correctAnswers, totalQuestions: totalQuestions };
 }
 
 // ==================== LIKES ====================
@@ -853,7 +1234,7 @@ function toggleLike(videoId) {
     }
   }
   
-  sheet.appendRow([email, videoId, new Date()]);
+  sheet.appendRow([email, videoId, formatarDataComoTexto()]);
   updateVideoLikeCount(videoId, 1);
   updateUserPoints(email, 2);
   return { success: true, liked: true };
@@ -1002,7 +1383,7 @@ function saveTrailCompletionPoints(trailId) {
     sheet.appendRow(['Email', 'TrailID', 'Data']);
   }
   
-  sheet.appendRow([email, trailId, new Date()]);
+  sheet.appendRow([email, trailId, formatarDataComoTexto()]);
 }
 
 // ==================== MÉTRICAS ====================

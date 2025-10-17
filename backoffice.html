@@ -250,6 +250,10 @@
       margin: auto;
     }
 
+    .modal-content.large {
+      max-width: 900px;
+    }
+
     .modal-header {
       padding: 24px;
       border-bottom: 1px solid var(--border);
@@ -576,6 +580,114 @@
       color: var(--text-primary);
     }
 
+    .question-item {
+      background: var(--bg-light);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .question-item h4 {
+      color: var(--primary);
+      margin-bottom: 16px;
+      font-size: 16px;
+    }
+
+    .question-item .option-input {
+      margin-bottom: 8px;
+    }
+
+    .trail-steps-list {
+      min-height: 200px;
+      max-height: 400px;
+      overflow-y: auto;
+      background: var(--bg-light);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .step-item {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .step-item-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .step-number {
+      background: var(--primary);
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .step-type-badge {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .step-type-badge.video {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+
+    .step-type-badge.quiz {
+      background: #f3e5f5;
+      color: #7b1fa2;
+    }
+
+    .add-step-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .add-step-controls select {
+      flex: 1;
+    }
+
+    .empty-state-small {
+      text-align: center;
+      padding: 32px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state-small i {
+      font-size: 32px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+
+    .empty-state-small p {
+      margin: 8px 0 4px 0;
+      font-weight: 600;
+    }
+
+    .empty-state-small small {
+      font-size: 13px;
+    }
+
     .confirm-modal {
       position: fixed;
       top: 0;
@@ -709,6 +821,25 @@
     <div class="section">
       <div class="section-header">
         <h2 class="section-title">
+          <i class="fas fa-clipboard-question"></i>
+          Gerenciar Quizzes
+        </h2>
+        <button class="btn btn-primary" onclick="openAddQuizModal()">
+          <i class="fas fa-plus"></i>
+          Criar Quiz
+        </button>
+      </div>
+      <div id="quizzesList">
+        <div class="loading">
+          <div class="spinner"></div>
+          Carregando quizzes...
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">
           <i class="fas fa-users"></i>
           Dashboard de Alunos
         </h2>
@@ -807,7 +938,7 @@
   </div>
 
   <div id="addTrailModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content large">
       <div class="modal-header">
         <h3 class="modal-title">Criar Nova Trilha</h3>
         <button class="modal-close" onclick="closeAddTrailModal()">
@@ -823,15 +954,111 @@
           <label>Descrição</label>
           <textarea id="trailDescription" rows="3" placeholder="Descreva o objetivo desta trilha"></textarea>
         </div>
+        
         <div class="form-group">
-          <label>Selecione os Vídeos *</label>
-          <select id="trailVideos" multiple size="8">
-          </select>
-          <small>Segure Ctrl/Cmd para selecionar múltiplos vídeos. A ordem de seleção será preservada.</small>
+          <label>Etapas da Trilha (Vídeos e Quizzes Intercalados)</label>
+          <div id="trailStepsList" class="trail-steps-list">
+            <div class="empty-state-small">
+              <i class="fas fa-list"></i>
+              <p>Nenhuma etapa adicionada</p>
+              <small>Adicione vídeos e quizzes abaixo</small>
+            </div>
+          </div>
         </div>
-        <button class="btn btn-primary" onclick="addTrail()">
+        
+        <div class="form-group">
+          <label>Adicionar Etapa</label>
+          <div class="add-step-controls">
+            <select id="stepType" onchange="updateStepContentOptions()">
+              <option value="video">Vídeo</option>
+              <option value="quiz">Quiz</option>
+            </select>
+            <select id="stepContent">
+              <option value="">Selecione o conteúdo...</option>
+            </select>
+            <button type="button" class="btn btn-secondary" onclick="addStepToTrail()">
+              <i class="fas fa-plus"></i>
+              Adicionar
+            </button>
+          </div>
+        </div>
+        
+        <button class="btn btn-primary" onclick="saveTrail()">
           <i class="fas fa-save"></i>
           Criar Trilha
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="addQuizModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Criar Novo Quiz</h3>
+        <button class="modal-close" onclick="closeAddQuizModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Nome do Quiz *</label>
+          <input type="text" id="quizName" placeholder="Ex: Quiz de Marketing Digital">
+        </div>
+        <div class="form-group">
+          <label>Descrição</label>
+          <textarea id="quizDescription" rows="3" placeholder="Descreva o objetivo deste quiz"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="saveQuizSet()">
+          <i class="fas fa-save"></i>
+          Criar Quiz e Adicionar Perguntas
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="addQuestionsModal" class="modal">
+    <div class="modal-content large">
+      <div class="modal-header">
+        <h3 class="modal-title" id="questionsModalTitle">Adicionar Perguntas ao Quiz</h3>
+        <button class="modal-close" onclick="closeAddQuestionsModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="currentQuizSetId">
+        <div id="questionsContainer">
+          <div class="question-item" data-question-number="1">
+            <h4>Pergunta 1</h4>
+            <div class="form-group">
+              <label>Pergunta *</label>
+              <input type="text" class="question-text" placeholder="Digite a pergunta">
+            </div>
+            <div class="form-group">
+              <label>Opções de Resposta *</label>
+              <input type="text" class="option-input" placeholder="Opção A" data-option="A">
+              <input type="text" class="option-input" placeholder="Opção B" data-option="B">
+              <input type="text" class="option-input" placeholder="Opção C" data-option="C">
+              <input type="text" class="option-input" placeholder="Opção D" data-option="D">
+            </div>
+            <div class="form-group">
+              <label>Resposta Correta *</label>
+              <select class="correct-answer">
+                <option value="">Selecione a resposta correta</option>
+                <option value="A">Opção A</option>
+                <option value="B">Opção B</option>
+                <option value="C">Opção C</option>
+                <option value="D">Opção D</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-secondary" onclick="addQuestionField()">
+          <i class="fas fa-plus"></i>
+          Adicionar Mais Uma Pergunta
+        </button>
+        <button class="btn btn-primary" onclick="saveQuizQuestions()">
+          <i class="fas fa-save"></i>
+          Salvar Todas as Perguntas
         </button>
       </div>
     </div>
@@ -861,6 +1088,7 @@
   <script>
     var allVideos = [];
     var allTrails = [];
+    var allQuizzes = [];
     var currentUser = null;
     var confirmCallback = null;
 
@@ -921,6 +1149,7 @@
       await loadMetrics();
       await loadVideos();
       await loadTrails();
+      await loadQuizzes();
       await loadStudents();
     };
 
@@ -1251,6 +1480,9 @@
       var html = '';
       for (var i = 0; i < trails.length; i++) {
         var trail = trails[i];
+        var stepsCount = trail.totalSteps || 0;
+        var stepsLabel = stepsCount + ' etapa' + (stepsCount !== 1 ? 's' : '');
+        
         html += '<div class="trail-item">' +
           '<div class="trail-item-header">' +
             '<div>' +
@@ -1262,43 +1494,140 @@
             '</button>' +
           '</div>' +
           '<div class="trail-videos-count">' +
-            '<i class="fas fa-video"></i> ' +
-            trail.totalVideos + ' vídeo' + (trail.totalVideos !== 1 ? 's' : '') +
+            '<i class="fas fa-list"></i> ' +
+            stepsLabel +
           '</div>' +
         '</div>';
       }
       container.innerHTML = html;
     }
 
+    var trailSteps = [];
+
     function openAddTrailModal() {
-      var select = document.getElementById('trailVideos');
-      var html = '';
-      for (var i = 0; i < allVideos.length; i++) {
-        html += '<option value="' + allVideos[i].id + '">' + allVideos[i].title + '</option>';
-      }
-      select.innerHTML = html;
+      trailSteps = [];
+      document.getElementById('trailName').value = '';
+      document.getElementById('trailDescription').value = '';
+      document.getElementById('trailStepsList').innerHTML = '<div class="empty-state-small">' +
+        '<i class="fas fa-list"></i>' +
+        '<p>Nenhuma etapa adicionada</p>' +
+        '<small>Adicione vídeos e quizzes abaixo</small>' +
+      '</div>';
       
+      updateStepContentOptions();
       document.getElementById('addTrailModal').classList.add('active');
     }
 
     function closeAddTrailModal() {
       document.getElementById('addTrailModal').classList.remove('active');
-      document.getElementById('trailName').value = '';
-      document.getElementById('trailDescription').value = '';
+      trailSteps = [];
     }
 
-    async function addTrail() {
-      var name = document.getElementById('trailName').value;
-      var description = document.getElementById('trailDescription').value;
-      var select = document.getElementById('trailVideos');
-      var options = select.selectedOptions;
-      var videos = [];
-      for (var i = 0; i < options.length; i++) {
-        videos.push(options[i].value);
+    function updateStepContentOptions() {
+      var stepType = document.getElementById('stepType').value;
+      var contentSelect = document.getElementById('stepContent');
+      var html = '<option value="">Selecione o conteúdo...</option>';
+      
+      if (stepType === 'video') {
+        for (var i = 0; i < allVideos.length; i++) {
+          html += '<option value="' + allVideos[i].id + '">' + allVideos[i].title + '</option>';
+        }
+      } else if (stepType === 'quiz') {
+        for (var i = 0; i < allQuizzes.length; i++) {
+          html += '<option value="' + allQuizzes[i].id + '">' + allQuizzes[i].name + '</option>';
+        }
       }
       
-      if (!name || videos.length === 0) {
-        showToast('Por favor, preencha o nome e selecione pelo menos um vídeo', 'warning');
+      contentSelect.innerHTML = html;
+    }
+
+    function addStepToTrail() {
+      var stepType = document.getElementById('stepType').value;
+      var contentId = document.getElementById('stepContent').value;
+      
+      if (!contentId) {
+        showToast('Selecione o conteúdo da etapa', 'warning');
+        return;
+      }
+      
+      var contentName = '';
+      if (stepType === 'video') {
+        for (var i = 0; i < allVideos.length; i++) {
+          if (allVideos[i].id === contentId) {
+            contentName = allVideos[i].title;
+            break;
+          }
+        }
+      } else if (stepType === 'quiz') {
+        for (var i = 0; i < allQuizzes.length; i++) {
+          if (allQuizzes[i].id === contentId) {
+            contentName = allQuizzes[i].name;
+            break;
+          }
+        }
+      }
+      
+      trailSteps.push({
+        type: stepType,
+        contentId: contentId,
+        contentName: contentName
+      });
+      
+      renderTrailSteps();
+      document.getElementById('stepContent').value = '';
+    }
+
+    function removeStepFromTrail(index) {
+      trailSteps.splice(index, 1);
+      renderTrailSteps();
+    }
+
+    function renderTrailSteps() {
+      var container = document.getElementById('trailStepsList');
+      
+      if (trailSteps.length === 0) {
+        container.innerHTML = '<div class="empty-state-small">' +
+          '<i class="fas fa-list"></i>' +
+          '<p>Nenhuma etapa adicionada</p>' +
+          '<small>Adicione vídeos e quizzes abaixo</small>' +
+        '</div>';
+        return;
+      }
+      
+      var html = '';
+      for (var i = 0; i < trailSteps.length; i++) {
+        var step = trailSteps[i];
+        var icon = step.type === 'video' ? 'fa-video' : 'fa-clipboard-question';
+        var badgeClass = step.type === 'video' ? 'video' : 'quiz';
+        var typeLabel = step.type === 'video' ? 'Vídeo' : 'Quiz';
+        
+        html += '<div class="step-item">' +
+          '<div class="step-item-info">' +
+            '<div class="step-number">' + (i + 1) + '</div>' +
+            '<i class="fas ' + icon + '"></i>' +
+            '<span class="step-type-badge ' + badgeClass + '">' + typeLabel + '</span>' +
+            '<strong>' + step.contentName + '</strong>' +
+          '</div>' +
+          '<button type="button" class="btn btn-sm btn-danger" onclick="removeStepFromTrail(' + i + ')">' +
+            '<i class="fas fa-trash"></i>' +
+          '</button>' +
+        '</div>';
+      }
+      
+      container.innerHTML = html;
+    }
+
+    async function saveTrail() {
+      var name = document.getElementById('trailName').value.trim();
+      var description = document.getElementById('trailDescription').value.trim();
+      
+      if (!name) {
+        showToast('Por favor, preencha o nome da trilha', 'warning');
+        return;
+      }
+      
+      if (trailSteps.length === 0) {
+        showToast('Adicione pelo menos uma etapa à trilha', 'warning');
         return;
       }
       
@@ -1314,7 +1643,7 @@
         hideLoading();
         showToast('Erro ao criar trilha. Tente novamente.', 'error');
         console.error(error);
-      }).addTrail({ name: name, description: description, videos: videos });
+      }).addTrail({ name: name, description: description, steps: trailSteps });
     }
 
     async function deleteTrail(trailId) {
@@ -1334,6 +1663,232 @@
             showToast('Erro ao excluir trilha. Tente novamente.', 'error');
             console.error(error);
           }).deleteTrail(trailId);
+        }
+      );
+    }
+
+    function openAddQuizModal() {
+      document.getElementById('quizName').value = '';
+      document.getElementById('quizDescription').value = '';
+      document.getElementById('addQuizModal').classList.add('active');
+    }
+
+    function closeAddQuizModal() {
+      document.getElementById('addQuizModal').classList.remove('active');
+    }
+
+    function saveQuizSet() {
+      var name = document.getElementById('quizName').value.trim();
+      var description = document.getElementById('quizDescription').value.trim();
+
+      if (!name) {
+        showToast('Por favor, preencha o nome do quiz', 'warning');
+        return;
+      }
+
+      showLoading('Criando quiz...');
+
+      google.script.run.withSuccessHandler(function(result) {
+        hideLoading();
+        closeAddQuizModal();
+        showToast('Quiz criado! Agora adicione as perguntas.');
+        openAddQuestionsModal(result.id, name);
+      }).withFailureHandler(function(error) {
+        hideLoading();
+        showToast('Erro ao criar quiz. Tente novamente.', 'error');
+        console.error(error);
+      }).addQuizSet({ name: name, description: description });
+    }
+
+    function openAddQuestionsModal(quizSetId, quizName) {
+      document.getElementById('currentQuizSetId').value = quizSetId;
+      document.getElementById('questionsModalTitle').textContent = 'Adicionar Perguntas: ' + quizName;
+      
+      var container = document.getElementById('questionsContainer');
+      container.innerHTML = '';
+      
+      for (var i = 1; i <= 5; i++) {
+        addQuestionField(i);
+      }
+      
+      document.getElementById('addQuestionsModal').classList.add('active');
+    }
+
+    function closeAddQuestionsModal() {
+      document.getElementById('addQuestionsModal').classList.remove('active');
+      document.getElementById('questionsContainer').innerHTML = '';
+    }
+
+    function addQuestionField(questionNumber) {
+      var container = document.getElementById('questionsContainer');
+      var num = questionNumber || container.children.length + 1;
+      
+      var questionHtml = '<div class="question-item" data-question-number="' + num + '">' +
+        '<h4>Pergunta ' + num + '</h4>' +
+        '<div class="form-group">' +
+          '<label>Pergunta *</label>' +
+          '<input type="text" class="question-text" placeholder="Digite a pergunta">' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label>Opções de Resposta *</label>' +
+          '<input type="text" class="option-input" placeholder="Opção A" data-option="A">' +
+          '<input type="text" class="option-input" placeholder="Opção B" data-option="B">' +
+          '<input type="text" class="option-input" placeholder="Opção C" data-option="C">' +
+          '<input type="text" class="option-input" placeholder="Opção D" data-option="D">' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label>Resposta Correta *</label>' +
+          '<select class="correct-answer">' +
+            '<option value="">Selecione a resposta correta</option>' +
+            '<option value="A">Opção A</option>' +
+            '<option value="B">Opção B</option>' +
+            '<option value="C">Opção C</option>' +
+            '<option value="D">Opção D</option>' +
+          '</select>' +
+        '</div>' +
+      '</div>';
+      
+      container.insertAdjacentHTML('beforeend', questionHtml);
+    }
+
+    function saveQuizQuestions() {
+      var quizSetId = document.getElementById('currentQuizSetId').value;
+      var questionItems = document.querySelectorAll('.question-item');
+      
+      if (questionItems.length === 0) {
+        showToast('Adicione pelo menos uma pergunta', 'warning');
+        return;
+      }
+      
+      var questions = [];
+      
+      for (var i = 0; i < questionItems.length; i++) {
+        var item = questionItems[i];
+        var questionText = item.querySelector('.question-text').value.trim();
+        var optionInputs = item.querySelectorAll('.option-input');
+        var correctAnswer = item.querySelector('.correct-answer').value;
+        
+        if (!questionText) {
+          showToast('Preencha todas as perguntas', 'warning');
+          return;
+        }
+        
+        var options = {};
+        var allOptionsFilled = true;
+        for (var j = 0; j < optionInputs.length; j++) {
+          var optionValue = optionInputs[j].value.trim();
+          var optionKey = optionInputs[j].getAttribute('data-option');
+          
+          if (!optionValue) {
+            allOptionsFilled = false;
+            break;
+          }
+          options[optionKey] = optionValue;
+        }
+        
+        if (!allOptionsFilled) {
+          showToast('Preencha todas as opções de resposta', 'warning');
+          return;
+        }
+        
+        if (!correctAnswer) {
+          showToast('Selecione a resposta correta para todas as perguntas', 'warning');
+          return;
+        }
+        
+        questions.push({
+          quizSetId: quizSetId,
+          question: questionText,
+          options: options,
+          correctAnswer: correctAnswer,
+          order: i
+        });
+      }
+      
+      showLoading('Salvando perguntas...');
+      
+      var savedCount = 0;
+      for (var k = 0; k < questions.length; k++) {
+        google.script.run.withSuccessHandler(function(result) {
+          savedCount++;
+          if (savedCount === questions.length) {
+            hideLoading();
+            closeAddQuestionsModal();
+            showToast('Perguntas salvas com sucesso!');
+            loadQuizzes();
+          }
+        }).withFailureHandler(function(error) {
+          hideLoading();
+          showToast('Erro ao salvar perguntas. Tente novamente.', 'error');
+          console.error(error);
+        }).addQuizQuestion(questions[k]);
+      }
+    }
+
+    function loadQuizzes() {
+      google.script.run.withSuccessHandler(function(quizzes) {
+        allQuizzes = quizzes;
+        renderQuizzesList();
+      }).withFailureHandler(function(error) {
+        document.getElementById('quizzesList').innerHTML = '<div class="empty-state">' +
+          '<i class="fas fa-exclamation-circle"></i>' +
+          '<p>Erro ao carregar quizzes</p>' +
+        '</div>';
+        console.error(error);
+      }).getQuizSets();
+    }
+
+    function renderQuizzesList() {
+      var container = document.getElementById('quizzesList');
+      
+      if (allQuizzes.length === 0) {
+        container.innerHTML = '<div class="empty-state">' +
+          '<i class="fas fa-clipboard-question"></i>' +
+          '<p>Nenhum quiz cadastrado</p>' +
+          '<small>Clique em "Criar Quiz" para começar</small>' +
+        '</div>';
+        return;
+      }
+      
+      var html = '<div class="videos-grid">';
+      for (var i = 0; i < allQuizzes.length; i++) {
+        var quiz = allQuizzes[i];
+        html += '<div class="video-card">' +
+          '<div class="video-card-body">' +
+            '<h3>' + quiz.name + '</h3>' +
+            '<p>' + (quiz.description || 'Sem descrição') + '</p>' +
+            '<div class="video-meta">' +
+              '<span><i class="fas fa-question-circle"></i> ' + quiz.questions.length + ' perguntas</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="video-card-actions">' +
+            '<button class="btn btn-sm btn-danger" onclick="deleteQuizSet(\'' + quiz.id + '\')">' +
+              '<i class="fas fa-trash"></i>' +
+            '</button>' +
+          '</div>' +
+        '</div>';
+      }
+      html += '</div>';
+      
+      container.innerHTML = html;
+    }
+
+    function deleteQuizSet(quizSetId) {
+      showConfirm(
+        'Excluir Quiz',
+        'Esta ação excluirá o quiz e todas as suas perguntas. Deseja continuar?',
+        function() {
+          showLoading('Excluindo quiz...');
+          
+          google.script.run.withSuccessHandler(function(result) {
+            hideLoading();
+            showToast('Quiz excluído com sucesso!');
+            loadQuizzes();
+          }).withFailureHandler(function(error) {
+            hideLoading();
+            showToast('Erro ao excluir quiz. Tente novamente.', 'error');
+            console.error(error);
+          }).deleteQuizSet(quizSetId);
         }
       );
     }

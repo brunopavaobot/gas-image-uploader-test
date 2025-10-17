@@ -317,6 +317,50 @@
       margin-right: 8px;
     }
 
+    .quiz-questions {
+      max-height: 60vh;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    .quiz-question-item {
+      background: var(--bg-light);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .quiz-question-item h4 {
+      color: var(--primary);
+      margin-bottom: 12px;
+      font-size: 16px;
+    }
+
+    .question-text {
+      font-size: 16px;
+      margin-bottom: 16px;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .quiz-card {
+      cursor: pointer;
+    }
+
+    .quiz-card .video-thumbnail {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     .btn-primary {
       background: var(--primary);
       color: white;
@@ -352,6 +396,39 @@
       font-size: 24px;
       font-weight: 700;
       color: var(--text-primary);
+    }
+
+    .trail-progress-container {
+      margin: 16px 0;
+    }
+
+    .trail-progress-bar {
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .trail-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary) 0%, #764ba2 100%);
+      transition: width 0.5s ease;
+    }
+
+    .trail-progress-text {
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .trail-progress-container.completed .trail-progress-fill {
+      background: linear-gradient(90deg, #4caf50 0%, #45a049 100%);
+    }
+
+    .trail-progress-container.completed .trail-progress-text {
+      color: #4caf50;
+      font-weight: 600;
     }
 
     .trail-progress {
@@ -588,6 +665,22 @@
     </div>
   </div>
 
+  <div id="quizSetModal" class="modal">
+    <div class="modal-content">
+      <button class="close-btn" onclick="closeQuizModal()">
+        <i class="fas fa-times"></i>
+      </button>
+      
+      <div class="video-details">
+        <h2 id="quizSetTitle"></h2>
+        <div id="quizSetContainer"></div>
+        <button class="btn-primary" onclick="submitQuizSetAnswers()" id="submitQuizSetBtn">
+          Enviar Respostas
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     var currentUser = null;
     var allVideos = [];
@@ -598,6 +691,8 @@
     var quizTimeLeft = 0;
     var currentQuizzes = [];
     var userAnswers = {};
+    var currentQuizSetId = null;
+    var currentQuizSetQuestions = [];
 
     function showToast(message, type) {
       var toast = document.createElement('div');
@@ -917,6 +1012,89 @@
         .submitQuiz(currentQuizzes[0].id, currentVideoId, userAnswers);
     }
 
+    function openQuizModal(quizSetId, quizName) {
+      currentQuizSetId = quizSetId;
+      document.getElementById('quizSetTitle').textContent = quizName;
+      
+      google.script.run
+        .withSuccessHandler(function(questions) {
+          currentQuizSetQuestions = questions;
+          renderQuizSet(questions);
+          document.getElementById('quizSetModal').style.display = 'flex';
+        })
+        .withFailureHandler(function(err) {
+          console.error('Erro ao carregar quiz:', err);
+          showToast('Erro ao carregar quiz', 'error');
+        })
+        .getQuizQuestions(quizSetId);
+    }
+
+    function closeQuizModal() {
+      document.getElementById('quizSetModal').style.display = 'none';
+      currentQuizSetId = null;
+      currentQuizSetQuestions = [];
+    }
+
+    function renderQuizSet(questions) {
+      var container = document.getElementById('quizSetContainer');
+      var html = '<div class="quiz-questions">';
+      
+      questions.forEach(function(question, index) {
+        html += '<div class="quiz-question-item">' +
+          '<h4>Pergunta ' + (index + 1) + '</h4>' +
+          '<p class="question-text">' + question.question + '</p>' +
+          '<div class="quiz-options">';
+        
+        var options = ['A', 'B', 'C', 'D'];
+        options.forEach(function(opt) {
+          if (question.options[opt]) {
+            html += '<label class="quiz-option">' +
+              '<input type="radio" name="question_' + question.id + '" value="' + opt + '">' +
+              '<span>' + opt + '. ' + question.options[opt] + '</span>' +
+            '</label>';
+          }
+        });
+        
+        html += '</div></div>';
+      });
+      
+      html += '</div>';
+      container.innerHTML = html;
+    }
+
+    function submitQuizSetAnswers() {
+      var answers = {};
+      var allAnswered = true;
+      
+      currentQuizSetQuestions.forEach(function(question) {
+        var selected = document.querySelector('input[name="question_' + question.id + '"]:checked');
+        if (selected) {
+          answers[question.id] = selected.value;
+        } else {
+          allAnswered = false;
+        }
+      });
+      
+      if (!allAnswered) {
+        showToast('Por favor, responda todas as perguntas', 'warning');
+        return;
+      }
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          var message = 'Quiz concluído! Você acertou ' + result.correctAnswers + ' de ' + result.totalQuestions + 
+                       ' (' + Math.round(result.score) + '%) • +' + result.points + ' pontos';
+          showToast(message, 'success');
+          closeQuizModal();
+          loadCurrentUser();
+        })
+        .withFailureHandler(function(err) {
+          console.error('Erro ao enviar quiz:', err);
+          showToast('Erro ao enviar quiz', 'error');
+        })
+        .submitQuizSetAnswers(currentQuizSetId, answers);
+    }
+
     function loadTrails() {
       google.script.run
         .withSuccessHandler(function(trails) {
@@ -941,12 +1119,19 @@
       
       var html = '';
       trails.forEach(function(trail) {
+        var stepsCount = trail.totalSteps || 0;
         html += '<div class="trail-card">' +
           '<div class="trail-header">' +
           '<div class="trail-title">' + trail.name + '</div>' +
-          '<span>' + (trail.totalVideos || 0) + ' vídeos</span>' +
+          '<span>' + stepsCount + ' etapa' + (stepsCount !== 1 ? 's' : '') + '</span>' +
           '</div>' +
           '<p>' + (trail.description || '') + '</p>' +
+          '<div class="trail-progress-container" id="progress_' + trail.id + '">' +
+            '<div class="trail-progress-bar">' +
+              '<div class="trail-progress-fill" style="width: 0%"></div>' +
+            '</div>' +
+            '<div class="trail-progress-text">Carregando progresso...</div>' +
+          '</div>' +
           '<div class="trail-videos" id="trail_' + trail.id + '"></div>' +
           '</div>';
       });
@@ -954,27 +1139,64 @@
       container.innerHTML = html;
       
       trails.forEach(function(trail) {
-        if (trail.videos && trail.videos.length > 0) {
+        if (trail.steps && trail.steps.length > 0) {
           var trailContainer = document.getElementById('trail_' + trail.id);
-          var videosHtml = '';
+          var stepsHtml = '';
           
-          trail.videos.forEach(function(video) {
-            var thumbHtml = video.thumbnail ? 
-              '<img src="' + video.thumbnail + '" alt="' + video.title + '">' :
-              '<i class="fas fa-play-circle"></i>';
-            
-            videosHtml += '<div class="video-card" onclick="openVideo(\'' + video.id + '\')">' +
-              '<div class="video-thumbnail">' + thumbHtml +
-              '<div class="video-play-icon"><i class="fas fa-play"></i></div>' +
-              '</div>' +
-              '<div class="video-info">' +
-              '<div class="video-title">' + video.title + '</div>' +
-              '</div></div>';
+          trail.steps.forEach(function(step, index) {
+            if (step.type === 'video') {
+              var video = step.data;
+              var thumbHtml = video.thumbnail ? 
+                '<img src="' + video.thumbnail + '" alt="' + video.title + '">' :
+                '<i class="fas fa-play-circle"></i>';
+              
+              stepsHtml += '<div class="video-card" onclick="openVideo(\'' + video.id + '\')">' +
+                '<div class="video-thumbnail">' + thumbHtml +
+                '<div class="video-play-icon"><i class="fas fa-play"></i></div>' +
+                '</div>' +
+                '<div class="video-info">' +
+                '<div class="video-title">' + video.title + '</div>' +
+                '</div></div>';
+            } else if (step.type === 'quiz') {
+              var quiz = step.data;
+              stepsHtml += '<div class="video-card quiz-card" onclick="openQuizModal(\'' + quiz.id + '\', \'' + quiz.name + '\')">' +
+                '<div class="video-thumbnail">' +
+                '<i class="fas fa-clipboard-question" style="font-size: 48px; color: var(--primary);"></i>' +
+                '</div>' +
+                '<div class="video-info">' +
+                '<div class="video-title">' + quiz.name + '</div>' +
+                '<small style="color: var(--text-secondary);">' + quiz.questions.length + ' perguntas</small>' +
+                '</div></div>';
+            }
           });
           
-          trailContainer.innerHTML = videosHtml;
+          trailContainer.innerHTML = stepsHtml;
         }
+        
+        loadTrailProgress(trail.id);
       });
+    }
+
+    function loadTrailProgress(trailId) {
+      google.script.run
+        .withSuccessHandler(function(progress) {
+          var progressContainer = document.getElementById('progress_' + trailId);
+          if (progressContainer) {
+            var fillBar = progressContainer.querySelector('.trail-progress-fill');
+            var textEl = progressContainer.querySelector('.trail-progress-text');
+            
+            fillBar.style.width = progress.percentage + '%';
+            textEl.textContent = progress.completedSteps + ' de ' + progress.totalSteps + ' etapas completadas (' + progress.percentage + '%)';
+            
+            if (progress.percentage === 100) {
+              progressContainer.classList.add('completed');
+            }
+          }
+        })
+        .withFailureHandler(function(err) {
+          console.error('Erro ao carregar progresso da trilha:', err);
+        })
+        .getTrailProgress(trailId);
     }
 
     function loadRanking() {
